@@ -1,0 +1,48 @@
+.drug-pc-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.drug-pc-title { font-size: 1.5rem; font-weight: 700; }
+.drug-pc-create-btn {
+  padding: .55rem 1.2rem; border-radius: 8px; border: none;
+  background: #5a9e8f; color: #fff; font-weight: 600; font-size: .9rem; cursor: pointer;
+}
+.drug-pc-create-btn:hover { background: #4a8e7f; }
+.drug-pc-empty { text-align: center; padding: 3rem 1rem; color: #9ca3af; font-size: .95rem; }
+.drug-pc-list { display: flex; flex-direction: column; gap: .75rem; }
+.drug-pc-card {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.25rem;
+}
+.drug-pc-card-body { display: flex; flex-direction: column; gap: .35rem; flex: 1; }
+.drug-pc-card-top { display: flex; align-items: center; gap: .5rem; }
+.drug-pc-card-top strong { font-size: 1rem; color: #1f2937; }
+.drug-pc-status-badge {
+  font-size: .75rem; padding: .1rem .5rem; border-radius: 999px;
+  background: #d1fae5; color: #065f46; font-weight: 500;
+}
+.drug-pc-status-badge--off { background: #f3f4f6; color: #9ca3af; }
+.drug-pc-low-badge {
+  font-size: .75rem; padding: .1rem .5rem; border-radius: 999px;
+  background: #fef2f2; color: #dc2626; font-weight: 500;
+}
+.drug-pc-meta { display: flex; flex-wrap: wrap; gap: .75rem; font-size: .82rem; color: #6b7280; }
+.drug-pc-card-right { display: flex; align-items: center; gap: 1rem; }
+.drug-pc-card-stats { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; }
+.drug-pc-card-stats strong { font-size: 1rem; color: #1f2937; }
+.drug-pc-stock { font-size: .8rem; color: #6b7280; }
+.drug-pc-stock--low { color: #dc2626; font-weight: 600; }
+.drug-pc-edit-btn {
+  padding: .3rem .75rem; border-radius: 6px; border: 1px solid #d1d5db;
+  background: #fff; color: #374151; font-size: .8rem; cursor: pointer;
+}
+.drug-pc-edit-btn:hover { background: #f3f4f6; }
+
+.drug-pc-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.drug-pc-modal { background: #fff; border-radius: 12px; padding: 1.5rem 2rem; width: 480px; max-height: 90vh; overflow-y: auto; }
+.drug-pc-modal h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; }
+.drug-pc-form { display: flex; flex-direction: column; gap: .85rem; }
+.drug-pc-field { display: flex; flex-direction: column; gap: .3rem; flex: 1; }
+.drug-pc-field span { font-size: .82rem; font-weight: 600; color: #374151; }
+.drug-pc-field input, .drug-pc-field select {
+  padding: .5rem .7rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: .9rem;
+}
+.drug-pc-row { display: flex; gap: .75rem; }
+.drug-pc-modal-actions { display: flex; justify-content: flex-end; gap: .75rem; margin-top: 1.25rem; }

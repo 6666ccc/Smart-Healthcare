@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.huiliao.mapper.RegistrationMapper">
+    <select id="selectList" resultType="com.example.huiliao.vo.RegistrationVO">
+        SELECT r.id, r.reg_no AS regNo, r.patient_id AS patientId, p.name AS patientName,
+               r.dept_id AS deptId, d.dept_name AS deptName,
+               r.staff_id AS staffId, s.name AS staffName,
+               r.reg_time AS regTime, r.reg_fee AS regFee, r.status
+        FROM registration r
+        LEFT JOIN patient p ON p.id = r.patient_id
+        LEFT JOIN dept d ON d.id = r.dept_id
+        LEFT JOIN staff s ON s.id = r.staff_id
+        <where>
+            <if test="patientId != null">AND r.patient_id = #{patientId}</if>
+            <if test="status != null">AND r.status = #{status}</if>
+        </where>
+        ORDER BY r.reg_time DESC
+    </select>
+    <select id="selectById" resultType="com.example.huiliao.entity.Registration">
+        SELECT * FROM registration WHERE id = #{id}
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id)
+        VALUES (#{regNo}, #{patientId}, #{scheduleId}, #{deptId}, #{staffId}, #{regTime}, #{regFee}, #{status}, #{cashierId})
+    </insert>
+    <update id="updateStatus">
+        UPDATE registration SET status = #{status} WHERE id = #{id}
+    </update>
+</mapper>

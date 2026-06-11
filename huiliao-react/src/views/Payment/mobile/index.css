@@ -1,0 +1,112 @@
+/* 收费管理 — 移动端 */
+
+.pay-page {
+  min-height: 100vh;
+  padding-bottom: calc(var(--tabbar-h, 64px) + env(safe-area-inset-bottom, 0px));
+  background: #f6f8fb;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.pay-header {
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+  background: #fff;
+}
+
+.pay-header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+
+.pay-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 16px 12px;
+  padding: 3px;
+  background: #f3f4f6;
+  border-radius: 10px;
+}
+
+.pay-tab {
+  flex: 1;
+  padding: 8px;
+  font-size: 13px; font-weight: 500;
+  color: #6b7280;
+  background: none; border: none;
+  border-radius: 8px; cursor: pointer;
+  text-align: center;
+}
+
+.pay-tab--active { color: #0d0d0d; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+.pay-main { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+
+.pay-empty { padding: 40px 0; text-align: center; font-size: 14px; color: #9ca3af; }
+
+.pay-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+
+.pay-card-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pay-card-body strong { font-size: 15px; font-weight: 600; color: #0d0d0d; }
+.pay-card-body > span { font-size: 13px; color: #6b7280; }
+
+.pay-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.pay-card-right > strong { font-size: 16px; font-weight: 700; }
+
+.pay-status { padding: 3px 8px; font-size: 11px; font-weight: 500; border-radius: 5px; }
+.pay-status--pending { color: #c9a06b; background: rgba(201,160,107,0.14); }
+.pay-status--paid { color: #5a9e8f; background: rgba(90,158,143,0.12); }
+
+.pay-pay-btn {
+  padding: 4px 12px;
+  font-size: 12px; font-weight: 600;
+  color: #fff; background: #6e8fb3;
+  border: none; border-radius: 8px; cursor: pointer;
+}
+
+.pay-dispense-btn {
+  padding: 6px 14px;
+  font-size: 12px; font-weight: 600;
+  color: #fff; background: #5a9e8f;
+  border: none; border-radius: 8px; cursor: pointer;
+}
+
+/* 支付弹窗 */
+.pay-overlay {
+  position: fixed; inset: 0; z-index: 400;
+  display: flex; align-items: flex-end;
+  background: rgba(0,0,0,0.4);
+}
+
+.pay-sheet {
+  width: 100%;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+}
+
+.pay-sheet h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
+.pay-amount { margin: 0 0 16px; font-size: 24px; font-weight: 700; color: #c9a06b; }
+.pay-error { margin: 0 0 12px; padding: 8px 12px; font-size: 13px; color: #dc2626; background: #fef2f2; border-radius: 8px; }
+
+.pay-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+.pay-field span { font-size: 13px; font-weight: 500; color: #374151; }
+.pay-field select, .pay-field input {
+  padding: 12px; font-size: 15px;
+  border: 1px solid #e5e5e5; border-radius: 10px;
+  background: #fff; font-family: inherit; outline: none;
+}
+
+.pay-submit-btn {
+  width: 100%; margin-top: 8px;
+  padding: 14px;
+  font-size: 16px; font-weight: 600;
+  color: #fff; background: #6e8fb3;
+  border: none; border-radius: 12px; cursor: pointer;
+}
+
+.pay-submit-btn:disabled { opacity: 0.5; }

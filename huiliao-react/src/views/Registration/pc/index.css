@@ -1,0 +1,289 @@
+/* 挂号管理 — PC */
+
+.reg-pc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.reg-pc-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0d0d0d;
+}
+
+.reg-pc-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: #f3f4f6;
+  border-radius: 10px;
+}
+
+.reg-pc-tab {
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reg-pc-tab--active {
+  color: #0d0d0d;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.reg-pc-create-btn {
+  margin-left: auto;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--ai-primary, #6e8fb3);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.reg-pc-create-btn:hover {
+  background: #5f7fa3;
+}
+
+/* 列表 */
+.reg-pc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reg-pc-empty {
+  padding: 40px 0;
+  text-align: center;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.reg-pc-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  transition: box-shadow 0.15s;
+}
+
+.reg-pc-card:hover {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.reg-pc-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reg-pc-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0d0d0d;
+}
+
+.reg-pc-card-meta {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.reg-pc-card-doctor {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.reg-pc-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.reg-pc-status {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+.reg-status--pending {
+  color: #6e8fb3;
+  background: rgba(110, 143, 179, 0.12);
+}
+
+.reg-status--active {
+  color: #5a9e8f;
+  background: rgba(90, 158, 143, 0.12);
+}
+
+.reg-status--done {
+  color: #9ca3af;
+  background: #f3f4f6;
+}
+
+.reg-status--cancelled {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.reg-pc-cancel-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #f87171;
+  background: none;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reg-pc-cancel-btn:hover {
+  color: #fff;
+  background: #f87171;
+  border-color: #f87171;
+}
+
+.reg-pc-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6e8fb3;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.reg-pc-link-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 弹窗 */
+.reg-pc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.4);
+  animation: regFadeIn 0.15s ease-out;
+}
+
+@keyframes regFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.reg-pc-modal {
+  width: 440px;
+  max-width: 90vw;
+  padding: 28px 28px 20px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.15);
+}
+
+.reg-pc-modal h2 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.reg-pc-error {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #dc2626;
+  background: #fef2f2;
+  border-radius: 8px;
+}
+
+.reg-pc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.reg-pc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reg-pc-field span {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.reg-pc-field select {
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  background: #fff;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.reg-pc-field select:focus {
+  border-color: #6e8fb3;
+  box-shadow: 0 0 0 3px rgba(110,143,179,0.12);
+}
+
+.reg-pc-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.reg-pc-btn-cancel {
+  padding: 8px 18px;
+  font-size: 13px;
+  color: #6b7280;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.reg-pc-btn-submit {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: #6e8fb3;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.reg-pc-btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

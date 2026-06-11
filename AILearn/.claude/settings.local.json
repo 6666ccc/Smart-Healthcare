@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip show *)",
+      "Bash(python -m ailearn_ai.API)",
+      "Bash(python -c ' *)",
+      "Bash(pip install *)",
+      "WebFetch(domain:bailian.console.aliyun.com)",
+      "Bash(curl -s -X POST \"https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings\" -H \"Authorization: Bearer sk-6ea0030170ff46cfb12bbe5d0278c743\" -H \"Content-Type: application/json\" -d \"{\\\\\"model\\\\\": \\\\\"text-embedding-v3\\\\\", \\\\\"input\\\\\": \\\\\"hello\\\\\"}\")",
+      "Bash(curl -s -X POST \"https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings\" -H \"Authorization: Bearer sk-6ea0030170ff46cfb12bbe5d0278c743\" -H \"Content-Type: application/json\" -d \"{\\\\\"model\\\\\": \\\\\"text-embedding-v3\\\\\", \\\\\"input\\\\\": [\\\\\"hello\\\\\", \\\\\"world\\\\\"]}\")"
+    ]
+  }
+}

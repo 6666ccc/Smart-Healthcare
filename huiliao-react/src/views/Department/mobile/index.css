@@ -1,0 +1,112 @@
+/* 科室查询 — 移动端 */
+
+.dept-page {
+  min-height: 100vh;
+  padding-bottom: calc(var(--tabbar-h, 64px) + env(safe-area-inset-bottom, 0px));
+  background: #f6f8fb;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.dept-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+  background: #fff;
+}
+
+.dept-header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+
+.dept-back {
+  padding: 4px 8px;
+  font-size: 15px;
+  color: #6e8fb3;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.dept-main, .dept-detail {
+  padding: 12px 16px;
+}
+
+.dept-empty {
+  padding: 40px 0;
+  text-align: center;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.dept-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  cursor: pointer;
+  text-align: left;
+}
+
+.dept-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px; height: 42px;
+  flex-shrink: 0;
+  font-size: 16px; font-weight: 600;
+  color: #6e8fb3;
+  background: rgba(110,143,179,0.1);
+  border-radius: 10px;
+}
+
+.dept-card-body { flex: 1; min-width: 0; }
+.dept-card-body strong { font-size: 15px; font-weight: 600; color: #0d0d0d; display: block; margin-bottom: 2px; }
+.dept-card-body span { font-size: 12px; color: #9ca3af; }
+
+.dept-card-arrow { font-size: 18px; color: #d1d5db; }
+
+/* 详情 */
+.dept-detail h2 { margin: 20px 0 10px; font-size: 16px; font-weight: 600; }
+
+.dept-desc { margin: 0 0 12px; font-size: 14px; color: #6b7280; line-height: 1.6; }
+
+.dept-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px;
+  background: #f9fafb;
+  border-radius: 10px;
+  font-size: 13px; color: #374151;
+}
+
+.dept-staff-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 6px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.03);
+}
+
+.dept-staff-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  flex-shrink: 0;
+  font-size: 13px; font-weight: 600;
+  color: #5a9e8f;
+  background: rgba(90,158,143,0.12);
+  border-radius: 8px;
+}
+
+.dept-staff-card strong { font-size: 14px; display: block; }
+.dept-staff-card span { font-size: 12px; color: #9ca3af; }

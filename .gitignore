@@ -1,0 +1,66 @@
+# ===== Python (AILearn) =====
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Build
+dist/
+build/
+
+# ===== Java / Maven (HuiLiao) =====
+target/
+HELP.md
+.mvn/wrapper/maven-wrapper.jar
+*.jar
+*.war
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ===== Node / React (huiliao-react) =====
+node_modules/
+dist-ssr
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===== Environment & Secrets =====
+.env
+application-local.yml
+**/application-local.yml
+
+# ===== IDE & Editor =====
+.idea/
+.vscode/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.iws
+*.iml
+*.ipr
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
+
+# ===== Logs =====
+logs
+*.log

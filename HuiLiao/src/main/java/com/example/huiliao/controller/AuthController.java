@@ -1,0 +1,42 @@
+package com.example.huiliao.controller;
+
+import com.example.huiliao.common.Result;
+import com.example.huiliao.dto.LoginDTO;
+import com.example.huiliao.service.AuthService;
+import com.example.huiliao.vo.LoginVO;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final AuthService authService;
+
+    @PostMapping("/login")
+    public Result<LoginVO> login(@Valid @RequestBody LoginDTO dto) {
+        return Result.success(authService.login(dto));
+    }
+
+    @PostMapping("/logout")
+    public Result<Void> logout(HttpServletRequest request) {
+        String token = resolveToken(request);
+        authService.logout(token);
+        return Result.success();
+    }
+
+    private String resolveToken(HttpServletRequest request) {
+        String auth = request.getHeader("Authorization");
+        if (StringUtils.hasText(auth) && auth.startsWith("Bearer ")) {
+            return auth.substring(7);
+        }
+        return request.getHeader("X-Token");
+    }
+}

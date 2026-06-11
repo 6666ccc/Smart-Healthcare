@@ -1,0 +1,17 @@
+//统一导出所有接口模块
+export * from './user'
+export * from './health'
+export * from './patient'
+export * from './department'
+export * from './staff'
+export * from './drug'
+export * from './medicalItem'
+export * from './schedule'
+export * from './registration'
+export * from './consultation'
+export * from './payment'
+export * from './drugStock'
+export * from './dashboard'
+export * from './ai'
+
+export { default as request, getToken, setToken, clearToken, TOKEN_KEY } from '../request'

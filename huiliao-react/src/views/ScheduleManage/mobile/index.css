@@ -1,0 +1,23 @@
+.sch-page { min-height: 100dvh; background: #f9fafb; padding-bottom: 80px; }
+.sch-header { padding: 1rem 1.25rem; background: #fff; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; }
+.sch-header h1 { font-size: 1.15rem; font-weight: 700; }
+.sch-header-add { width: 32px; height: 32px; border-radius: 8px; border: none; background: #5a9e8f; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.sch-filter-bar { padding: .75rem 1rem; background: #fff; border-bottom: 1px solid #f3f4f6; }
+.sch-filter-bar select { width: 100%; padding: .45rem .7rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: .9rem; }
+.sch-main { padding: .75rem 1rem; display: flex; flex-direction: column; gap: .6rem; }
+.sch-empty { text-align: center; padding: 3rem 1rem; color: #9ca3af; font-size: .9rem; }
+.sch-card {
+  background: #fff; border-radius: 10px; padding: .9rem 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.sch-card-body { display: flex; flex-direction: column; gap: .15rem; }
+.sch-card-body strong { font-size: .95rem; }
+.sch-card-body span { font-size: .8rem; color: #6b7280; }
+
+.sch-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+.sch-sheet { background: #fff; border-radius: 16px 16px 0 0; padding: 1.25rem; width: 100%; max-height: 80vh; overflow-y: auto; }
+.sch-sheet h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+.sch-field { display: flex; flex-direction: column; gap: .25rem; margin-bottom: .75rem; }
+.sch-field span { font-size: .82rem; font-weight: 600; color: #374151; }
+.sch-field input, .sch-field select { padding: .5rem .7rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: .9rem; }
+.sch-row { display: flex; gap: .75rem; }

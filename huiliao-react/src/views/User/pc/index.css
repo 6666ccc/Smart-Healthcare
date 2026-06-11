@@ -1,0 +1,212 @@
+/* 慧疗个人中心 — PC 端（复用 home-pc 侧栏，本文件仅补充账号页布局） */
+
+.user-pc-header-title {
+  flex: 1;
+  margin: 0;
+  padding: 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text, #3d4a5c);
+}
+
+.home-pc-user--static {
+  cursor: default;
+}
+
+.user-pc-body {
+  padding-top: 8px;
+}
+
+.user-pc-content {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.user-pc-profile-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.user-pc-profile-card {
+  position: relative;
+  padding: 28px 24px;
+  text-align: center;
+  background: var(--color-surface, #fff);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card, 0 2px 12px rgba(61, 74, 92, 0.06));
+  overflow: hidden;
+}
+
+.user-pc-avatar-lg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  font-size: 32px;
+  font-weight: 600;
+  color: #6e8fb3;
+  background: rgba(110, 143, 179, 0.12);
+}
+
+.user-pc-profile-card h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.user-pc-role {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #7a8799;
+}
+
+.user-pc-portal-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6e8fb3;
+  background: rgba(110, 143, 179, 0.12);
+  border-radius: 20px;
+}
+
+.user-pc-shield {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 48px;
+  height: 48px;
+  color: rgba(110, 143, 179, 0.2);
+}
+
+.user-pc-shield svg {
+  width: 100%;
+  height: 100%;
+}
+
+.user-pc-side-actions {
+  padding: 16px;
+  background: var(--color-surface, #fff);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card, 0 2px 12px rgba(61, 74, 92, 0.06));
+}
+
+.user-pc-logout-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #c96b6b;
+  background: rgba(201, 107, 107, 0.1);
+  border: 1px solid rgba(201, 107, 107, 0.25);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.user-pc-logout-btn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.user-pc-logout-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.user-pc-logout-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  color: #a8b3c2;
+}
+
+.user-pc-detail-panel {
+  padding: 24px;
+  background: var(--color-surface, #fff);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card, 0 2px 12px rgba(61, 74, 92, 0.06));
+}
+
+.user-pc-section-head {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e4eaf0;
+}
+
+.user-pc-section-head h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.user-pc-section-head p {
+  margin: 0;
+  font-size: 13px;
+  color: #7a8799;
+}
+
+.user-pc-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+  margin: 0 0 24px;
+}
+
+.user-pc-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e8edf3;
+}
+
+.user-pc-info-row dt {
+  margin: 0;
+  font-size: 12px;
+  color: #7a8799;
+}
+
+.user-pc-info-row dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.user-pc-tips-card {
+  padding: 16px;
+  background: #f6f8fb;
+  border-radius: 12px;
+}
+
+.user-pc-tips-card h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.user-pc-tips-card ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #7a8799;
+}
+
+@media (max-width: 1200px) {
+  .user-pc-content {
+    grid-template-columns: 1fr;
+  }
+
+  .user-pc-info-grid {
+    grid-template-columns: 1fr;
+  }
+}

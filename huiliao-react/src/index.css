@@ -1,0 +1,46 @@
+/* 全局样式 & CSS 变量 */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --c-bg:#f6f8fb;--c-white:#fff;--c-text:#3d4a5c;--c-sub:#7a8799;--c-muted:#a8b3c2;
+  --c-border:#e4eaf2;--c-primary:#6e8fb3;--c-primary-hover:#5f7fa3;--c-accent:#7fa7a3;
+  --c-danger:#ef4444;--c-danger-bg:#fef2f2;--c-warning:#f59e0b;--c-warning-bg:#fef3c7;
+  --c-success:#5a9e8f;--c-success-bg:#d1fae5;
+  --radius:8px;--radius-lg:12px;
+  --ease-soft:cubic-bezier(0.22,1,0.36,1);
+}
+body{font-family:"PingFang SC","Microsoft YaHei",-apple-system,system-ui,sans-serif;color:var(--c-text);background:var(--c-bg);-webkit-font-smoothing:antialiased;line-height:1.5}
+button{cursor:pointer;font:inherit;border:none;background:none;color:inherit}
+a{color:inherit;text-decoration:none}
+input,select,textarea{font:inherit}
+
+/* ---- 共享组件样式 ---- */
+.shared-empty{text-align:center;padding:3rem 1rem;color:var(--c-muted);font-size:.9rem}
+.shared-error{color:var(--c-danger);font-size:.85rem;padding:.4rem .75rem;background:var(--c-danger-bg);border-radius:6px;margin-bottom:.5rem}
+.shared-btn-cancel{
+  padding:.5rem 1.2rem;border-radius:var(--radius);border:1px solid var(--c-border);
+  background:var(--c-white);color:var(--c-text);font-weight:600;font-size:.85rem;cursor:pointer;
+}
+.shared-btn-cancel:hover{background:#f3f4f6}
+.shared-btn-submit{
+  padding:.5rem 1.2rem;border-radius:var(--radius);border:none;
+  background:var(--c-primary);color:#fff;font-weight:600;font-size:.85rem;cursor:pointer;
+}
+.shared-btn-submit:hover{background:var(--c-primary-hover)}
+.shared-btn-submit:disabled,.shared-btn-cancel:disabled{opacity:.5;cursor:not-allowed}
+.shared-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:100}
+.shared-modal{background:var(--c-white);border-radius:var(--radius-lg);padding:1.5rem 2rem;min-width:320px;max-width:90vw;max-height:90vh;overflow-y:auto}
+.shared-modal h2{font-size:1.15rem;font-weight:700;margin-bottom:.75rem}
+.shared-modal-msg{font-size:.9rem;color:var(--c-sub);margin-bottom:1rem}
+.shared-modal-actions{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1rem}
+.shared-status{
+  display:inline-block;font-size:.8rem;font-weight:600;padding:.15rem .6rem;border-radius:999px;
+  background:#f3f4f6;color:var(--c-sub);
+}
+.shared-status--pending{background:var(--c-warning-bg);color:var(--c-warning)}
+.shared-status--active{background:var(--c-success-bg);color:var(--c-success)}
+.shared-status--done{background:#e0e7ff;color:#4338ca}
+.shared-status--cancelled{background:#f3f4f6;color:var(--c-muted)}
+.shared-status--paid{background:var(--c-success-bg);color:var(--c-success)}
+.shared-status--refund{background:var(--c-warning-bg);color:var(--c-warning)}
+.shared-status--open{background:var(--c-success-bg);color:var(--c-success)}
+.shared-status--closed{background:#f3f4f6;color:var(--c-muted)}

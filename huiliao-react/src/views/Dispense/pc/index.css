@@ -1,0 +1,25 @@
+.disp-pc-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
+.disp-pc-empty { text-align: center; padding: 3rem 1rem; color: #9ca3af; font-size: .95rem; }
+.disp-pc-list { display: flex; flex-direction: column; gap: .75rem; }
+.disp-pc-card {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.25rem;
+  transition: box-shadow .15s;
+}
+.disp-pc-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+.disp-pc-card-body { display: flex; flex-direction: column; gap: .25rem; }
+.disp-pc-card-body strong { font-size: 1rem; color: #1f2937; }
+.disp-pc-drugs { font-size: .85rem; color: #6b7280; }
+.disp-pc-time { font-size: .8rem; color: #9ca3af; }
+.disp-pc-card-right { display: flex; align-items: center; gap: .75rem; }
+.disp-pc-status {
+  font-size: .8rem; font-weight: 600; color: #f59e0b; background: #fef3c7;
+  padding: .2rem .6rem; border-radius: 999px;
+}
+.disp-pc-dispense-btn {
+  padding: .45rem 1rem; border-radius: 8px; border: none;
+  background: #5a9e8f; color: #fff; font-weight: 600; font-size: .85rem; cursor: pointer;
+  transition: background .15s;
+}
+.disp-pc-dispense-btn:hover { background: #4a8e7f; }
+.disp-pc-dispense-btn:disabled { background: #9ca3af; cursor: not-allowed; }

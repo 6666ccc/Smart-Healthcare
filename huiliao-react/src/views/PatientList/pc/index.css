@@ -1,0 +1,38 @@
+.pat-pc-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.pat-pc-title { font-size: 1.5rem; font-weight: 700; }
+.pat-pc-create-btn {
+  padding: .55rem 1.2rem; border-radius: 8px; border: none;
+  background: #5a9e8f; color: #fff; font-weight: 600; font-size: .9rem; cursor: pointer;
+}
+.pat-pc-create-btn:hover { background: #4a8e7f; }
+.pat-pc-empty { text-align: center; padding: 3rem 1rem; color: #9ca3af; font-size: .95rem; }
+.pat-pc-list { display: flex; flex-direction: column; gap: .75rem; }
+.pat-pc-card {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.25rem;
+}
+.pat-pc-card-body { display: flex; flex-direction: column; gap: .35rem; flex: 1; }
+.pat-pc-card-top { display: flex; align-items: center; gap: .5rem; }
+.pat-pc-card-top strong { font-size: 1rem; color: #1f2937; }
+.pat-pc-gender { font-size: .8rem; padding: .1rem .5rem; border-radius: 999px; background: #f3f4f6; color: #6b7280; }
+.pat-pc-card-meta { display: flex; flex-wrap: wrap; gap: .75rem; font-size: .82rem; color: #6b7280; }
+.pat-pc-allergy { font-size: .8rem; color: #ef4444; background: #fef2f2; padding: .15rem .5rem; border-radius: 4px; display: inline-block; width: fit-content; }
+.pat-pc-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; }
+.pat-pc-id { font-size: .75rem; color: #9ca3af; }
+.pat-pc-edit-btn {
+  padding: .3rem .75rem; border-radius: 6px; border: 1px solid #d1d5db;
+  background: #fff; color: #374151; font-size: .8rem; cursor: pointer;
+}
+.pat-pc-edit-btn:hover { background: #f3f4f6; }
+
+.pat-pc-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.pat-pc-modal { background: #fff; border-radius: 12px; padding: 1.5rem 2rem; width: 520px; max-height: 90vh; overflow-y: auto; }
+.pat-pc-modal h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; }
+.pat-pc-form { display: flex; flex-direction: column; gap: .85rem; }
+.pat-pc-field { display: flex; flex-direction: column; gap: .3rem; flex: 1; }
+.pat-pc-field span { font-size: .82rem; font-weight: 600; color: #374151; }
+.pat-pc-field input, .pat-pc-field select {
+  padding: .5rem .7rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: .9rem;
+}
+.pat-pc-row { display: flex; gap: .75rem; }
+.pat-pc-modal-actions { display: flex; justify-content: flex-end; gap: .75rem; margin-top: 1.25rem; }
