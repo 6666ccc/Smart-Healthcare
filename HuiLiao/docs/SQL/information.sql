@@ -535,7 +535,7 @@ WHERE p.rx_no = 'RX20260003' AND d.drug_code = 'D010'
 ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), usage_desc = VALUES(usage_desc);
 
 -- 修正 CHG20260003 费用明细中的药费金额
---（chg_order 已在插入时使用正确金额，但 charge_detail 中写死的 29.80 需要更新为 30.30）
+# --（chg_order 已在插入时使用正确金额，但 charge_detail 中写死的 29.80 需要更新为 30.30）
 UPDATE charge_detail cd
 JOIN charge_order o ON o.id = cd.charge_order_id
 SET cd.amount = 30.30

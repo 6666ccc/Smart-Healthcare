@@ -24,7 +24,7 @@ export default function PatientHomePc() {
       greetingSub={loading ? '数据加载中…' : '以下是您的就诊服务'}
       searchPlaceholder="搜索科室、医生"
     >
-      <section className="home-pc-todos">
+      <section className="home-pc-todos anim-stagger anim-visible">
         <article className="home-pc-todo-card">
           <span className="home-pc-todo-icon home-pc-todo-icon--blue"><StatIcon theme="blue" /></span>
           <div className="home-pc-todo-body">
@@ -50,7 +50,7 @@ export default function PatientHomePc() {
 
       <section className="home-pc-section">
         <h2 className="home-pc-section-title">快捷服务</h2>
-        <div className="home-pc-services">
+        <div className="home-pc-services anim-stagger anim-visible">
           {quickActions.map((item) => (
             <button
               key={item.id}

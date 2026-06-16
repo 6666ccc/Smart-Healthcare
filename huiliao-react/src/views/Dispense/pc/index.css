@@ -4,9 +4,9 @@
 .disp-pc-card {
   display: flex; align-items: center; justify-content: space-between;
   background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.25rem;
-  transition: box-shadow .15s;
+  transition: transform .15s var(--ease-soft),box-shadow .15s var(--ease-soft);
 }
-.disp-pc-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+.disp-pc-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.05)}
 .disp-pc-card-body { display: flex; flex-direction: column; gap: .25rem; }
 .disp-pc-card-body strong { font-size: 1rem; color: #1f2937; }
 .disp-pc-drugs { font-size: .85rem; color: #6b7280; }

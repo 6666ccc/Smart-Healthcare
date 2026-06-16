@@ -81,11 +81,12 @@
   background: #fff;
   border: 1px solid #e5e5e5;
   border-radius: 12px;
-  transition: box-shadow 0.15s;
+  transition: transform .15s var(--ease-soft),box-shadow .15s var(--ease-soft);
 }
 
 .reg-pc-card:hover {
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.05);
 }
 
 .reg-pc-card-body {

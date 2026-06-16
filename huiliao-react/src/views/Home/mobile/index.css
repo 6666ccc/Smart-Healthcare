@@ -723,6 +723,11 @@
 .home-tab-item svg {
   width: 22px;
   height: 22px;
+  transition: transform var(--motion-base) var(--ease-soft);
+}
+
+.home-tab-item--active svg {
+  animation: tabPop .35s var(--ease-soft);
 }
 
 .home-tab-item--active {

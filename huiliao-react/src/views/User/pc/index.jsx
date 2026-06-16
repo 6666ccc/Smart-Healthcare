@@ -10,7 +10,7 @@ export default function UserPc() {
 
   return (
     <UserPcLayout>
-      <div className="user-pc-content">
+      <div className="user-pc-content anim-stagger anim-visible">
         <section className="user-pc-profile-panel">
           <div className="user-pc-profile-card">
             <span className="user-pc-avatar-lg" aria-hidden>

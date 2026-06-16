@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../store'
+import { Skeleton } from '../../../components'
 import {
-  listCharges, listPendingCharges, payCharge, createChargeFromVisit, dispensePrescription
+  listCharges, listPendingCharges, payCharge, dispensePrescription
 } from '../../../api/modules/payment'
 import { listPendingDispensePrescriptions } from '../../../api/modules/consultation'
-import {
-  SIDEBAR_NAV_BY_PORTAL, SIDEBAR_BOTTOM_BY_PORTAL,
-} from '../../Home/data'
-import { getPortalLabel, getPortalType } from '../../Home/role'
-import {
-  IconChevronDown, IconHeadset, IconLogo, IconMessage, IconSearch, IconSparkles, NavIcon,
-} from '../../Home/icons'
-import { formatMoney } from '../../Home/utils'
-import '../../Home/pc/index.css'
+import { getPortalType } from '../../Home/role'
+import { PcLayout } from '../../../layouts'
+import { formatMoney } from '../../../utils'
 import './index.css'
 
 const PAY_STATUS_MAP = {
@@ -23,12 +17,8 @@ const PAY_STATUS_MAP = {
 }
 
 export default function PaymentPc() {
-  const navigate = useNavigate()
-  const { pathname } = useLocation()
   const { user } = useAuth()
   const portal = getPortalType(user)
-  const portalLabel = getPortalLabel(portal)
-  const displayName = user?.realName || user?.username || '用户'
 
   const [charges, setCharges] = useState([])
   const [pendingPrescriptions, setPendingPrescriptions] = useState([])
@@ -40,10 +30,6 @@ export default function PaymentPc() {
   const [submitting, setSubmitting] = useState(false)
 
   const isAdmin = portal === 'admin'
-
-  const sidebarNav = SIDEBAR_NAV_BY_PORTAL[portal] ?? []
-  const sidebarBottom = SIDEBAR_BOTTOM_BY_PORTAL[portal] ?? []
-  const isActiveNav = (path) => pathname === path
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -93,157 +79,101 @@ export default function PaymentPc() {
   }
 
   return (
-    <div className={`pay-pc home-pc home-pc--${portal}`}>
-      <aside className="home-pc-sidebar">
-        <div className="home-pc-brand">
-          <span className="home-pc-brand-logo"><IconLogo /></span>
-          <span className="home-pc-brand-text"><strong>慧疗</strong><span>{portalLabel}</span></span>
-        </div>
-        <nav className="home-pc-nav">
-          {sidebarNav.map((item) => (
-            <button key={item.id} type="button"
-              className={`home-pc-nav-item${isActiveNav(item.path) ? ' home-pc-nav-item--active' : ''}`}
-              onClick={() => navigate(item.path)}>
-              <NavIcon name={item.icon} /><span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="home-pc-sidebar-bottom">
-          {sidebarBottom.map((item) => (
-            <button key={item.id} type="button" className="home-pc-nav-item home-pc-nav-item--sub"
-              onClick={() => navigate(item.path)}>
-              <NavIcon name={item.icon} /><span>{item.label}</span>
-            </button>
-          ))}
-          <button type="button" className="home-pc-ai-btn" onClick={() => navigate('/assistant')}>
-            <IconSparkles /><span>AI 助手</span>
-          </button>
-        </div>
-      </aside>
-
-      <div className="home-pc-main">
-        <header className="home-pc-header">
-          <button type="button" className="home-pc-hospital">
-            <span>杭州市第一人民医院</span><IconChevronDown />
-          </button>
-          <label className="home-pc-search">
-            <IconSearch /><input type="search" placeholder="搜索收费单…" />
-          </label>
-          <div className="home-pc-header-actions">
-            <button type="button" className="home-pc-icon-btn"><IconMessage /></button>
-            <button type="button" className="home-pc-user" onClick={() => navigate('/user')}>
-              <span className="home-pc-user-avatar">{displayName.charAt(0)}</span>
-              <span className="home-pc-user-info"><strong>{displayName}</strong><span>{user?.roleName || portalLabel}</span></span>
-            </button>
-          </div>
-        </header>
-
-        <div className="home-pc-body">
-          <div className="pay-pc-toolbar">
-            <h1 className="pay-pc-title">收费管理</h1>
-            <div className="pay-pc-tabs">
-              <button className={`pay-pc-tab${tab === 'pending' ? ' pay-pc-tab--active' : ''}`} onClick={() => setTab('pending')}>待收费</button>
-              <button className={`pay-pc-tab${tab === 'all' ? ' pay-pc-tab--active' : ''}`} onClick={() => setTab('all')}>全部</button>
-              {isAdmin && (
-                <button className={`pay-pc-tab${tab === 'dispense' ? ' pay-pc-tab--active' : ''}`} onClick={() => setTab('dispense')}>待发药</button>
-              )}
-            </div>
-          </div>
-
-          {/* 收费列表 */}
-          {tab !== 'dispense' && (
-            <>
-              {loading && <p className="pay-pc-empty">加载中…</p>}
-              {!loading && charges.length === 0 && <p className="pay-pc-empty">暂无收费记录</p>}
-              <div className="pay-pc-list">
-                {charges.map((c) => {
-                  const info = PAY_STATUS_MAP[c.payStatus ?? c.status] ?? { label: '未知', cls: '' }
-                  return (
-                    <div key={c.id} className="pay-pc-card">
-                      <div className="pay-pc-card-body">
-                        <strong>{c.patientName || `收费单 #${c.id}`}</strong>
-                        <span>{c.visitId ? `就诊 #${c.visitId}` : ''} {c.createTime || ''}</span>
-                        {c.items && <span className="pay-pc-items">{c.items}</span>}
-                      </div>
-                      <div className="pay-pc-card-right">
-                        <strong>{formatMoney(c.totalAmount || c.amount)}</strong>
-                        <span className={`pay-pc-status ${info.cls}`}>{info.label}</span>
-                        {(c.payStatus === 0 || c.status === 0) && (
-                          <button type="button" className="pay-pc-pay-btn" onClick={() => openPayModal(c)}>支付</button>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          )}
-
-          {/* 待发药列表 */}
-          {tab === 'dispense' && (
-            <>
-              {loading && <p className="pay-pc-empty">加载中…</p>}
-              {!loading && pendingPrescriptions.length === 0 && <p className="pay-pc-empty">暂无待发药处方</p>}
-              <div className="pay-pc-list">
-                {pendingPrescriptions.map((p) => (
-                  <div key={p.id} className="pay-pc-card">
-                    <div className="pay-pc-card-body">
-                      <strong>{p.patientName || `处方 #${p.id}`}</strong>
-                      <span>{p.drugNames || p.items || '—'}</span>
-                    </div>
-                    <div className="pay-pc-card-right">
-                      <button type="button" className="pay-pc-dispense-btn" onClick={() => handleDispense(p.id)}>
-                        确认发药
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
+    <PcLayout portal={portal} searchPlaceholder="搜索收费单…">
+      <div className="pay-pc-toolbar">
+        <h1 className="pay-pc-title">收费管理</h1>
+        <div className="pay-pc-tabs">
+          <button className={`pay-pc-tab${tab === 'pending' ? ' pay-pc-tab--active' : ''}`} onClick={() => setTab('pending')}>待收费</button>
+          <button className={`pay-pc-tab${tab === 'all' ? ' pay-pc-tab--active' : ''}`} onClick={() => setTab('all')}>全部</button>
+          {isAdmin && (
+            <button className={`pay-pc-tab${tab === 'dispense' ? ' pay-pc-tab--active' : ''}`} onClick={() => setTab('dispense')}>待发药</button>
           )}
         </div>
-
-        {/* 支付弹窗 */}
-        {payModal && (
-          <div className="pay-pc-modal-overlay" onClick={() => setPayModal(null)}>
-            <div className="pay-pc-modal" onClick={(e) => e.stopPropagation()}>
-              <h2>确认支付</h2>
-              <p className="pay-pc-modal-amount">应收：{formatMoney(payModal.totalAmount)}</p>
-              {payError && <p className="pay-pc-error">{payError}</p>}
-              <label className="pay-pc-field">
-                <span>支付方式</span>
-                <select value={payForm.payType} onChange={(e) => setPayForm((f) => ({ ...f, payType: Number(e.target.value) }))}>
-                  <option value={1}>现金</option>
-                  <option value={2}>微信支付</option>
-                  <option value={3}>支付宝</option>
-                  <option value={4}>银行卡</option>
-                  <option value={5}>医保</option>
-                </select>
-              </label>
-              <label className="pay-pc-field">
-                <span>实收金额</span>
-                <input type="number" step="0.01" min="0" value={payForm.paidAmount}
-                  onChange={(e) => setPayForm((f) => ({ ...f, paidAmount: e.target.value }))} />
-              </label>
-              <div className="pay-pc-modal-actions">
-                <button type="button" className="pay-pc-btn-cancel" onClick={() => setPayModal(null)}>取消</button>
-                <button type="button" className="pay-pc-btn-submit" disabled={submitting} onClick={handlePay}>
-                  {submitting ? '处理中…' : '确认支付'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <footer className="home-pc-footer">
-          <p>© 2025 杭州市第一人民医院 · 浙ICP备05012345号-1</p>
-          <div className="home-pc-footer-links">
-            <button type="button">隐私政策</button><span>·</span>
-            <button type="button">服务协议</button><span>·</span>
-            <button type="button">帮助中心</button>
-          </div>
-        </footer>
       </div>
-    </div>
+
+      {/* 收费列表 */}
+      {tab !== 'dispense' && (
+        <>
+          {loading && <Skeleton variant="card" count={4} />}
+          {!loading && charges.length === 0 && <p className="pay-pc-empty">暂无收费记录</p>}
+          <div className="pay-pc-list">
+            {charges.map((c) => {
+              const info = PAY_STATUS_MAP[c.payStatus ?? c.status] ?? { label: '未知', cls: '' }
+              return (
+                <div key={c.id} className="pay-pc-card">
+                  <div className="pay-pc-card-body">
+                    <strong>{c.patientName || `收费单 #${c.id}`}</strong>
+                    <span>{c.visitId ? `就诊 #${c.visitId}` : ''} {c.createTime || ''}</span>
+                    {c.items && <span className="pay-pc-items">{c.items}</span>}
+                  </div>
+                  <div className="pay-pc-card-right">
+                    <strong>{formatMoney(c.totalAmount || c.amount)}</strong>
+                    <span className={`pay-pc-status ${info.cls}`}>{info.label}</span>
+                    {(c.payStatus === 0 || c.status === 0) && (
+                      <button type="button" className="pay-pc-pay-btn" onClick={() => openPayModal(c)}>支付</button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {/* 待发药列表 */}
+      {tab === 'dispense' && (
+        <>
+          {loading && <Skeleton variant="card" count={4} />}
+          {!loading && pendingPrescriptions.length === 0 && <p className="pay-pc-empty">暂无待发药处方</p>}
+          <div className="pay-pc-list">
+            {pendingPrescriptions.map((p) => (
+              <div key={p.id} className="pay-pc-card">
+                <div className="pay-pc-card-body">
+                  <strong>{p.patientName || `处方 #${p.id}`}</strong>
+                  <span>{p.drugNames || p.items || '—'}</span>
+                </div>
+                <div className="pay-pc-card-right">
+                  <button type="button" className="pay-pc-dispense-btn" onClick={() => handleDispense(p.id)}>
+                    确认发药
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* 支付弹窗 */}
+      {payModal && (
+        <div className="pay-pc-modal-overlay" onClick={() => setPayModal(null)}>
+          <div className="pay-pc-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>确认支付</h2>
+            <p className="pay-pc-modal-amount">应收：{formatMoney(payModal.totalAmount)}</p>
+            {payError && <p className="pay-pc-error">{payError}</p>}
+            <label className="pay-pc-field">
+              <span>支付方式</span>
+              <select value={payForm.payType} onChange={(e) => setPayForm((f) => ({ ...f, payType: Number(e.target.value) }))}>
+                <option value={1}>现金</option>
+                <option value={2}>微信支付</option>
+                <option value={3}>支付宝</option>
+                <option value={4}>银行卡</option>
+                <option value={5}>医保</option>
+              </select>
+            </label>
+            <label className="pay-pc-field">
+              <span>实收金额</span>
+              <input type="number" step="0.01" min="0" value={payForm.paidAmount}
+                onChange={(e) => setPayForm((f) => ({ ...f, paidAmount: e.target.value }))} />
+            </label>
+            <div className="pay-pc-modal-actions">
+              <button type="button" className="pay-pc-btn-cancel" onClick={() => setPayModal(null)}>取消</button>
+              <button type="button" className="pay-pc-btn-submit" disabled={submitting} onClick={handlePay}>
+                {submitting ? '处理中…' : '确认支付'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </PcLayout>
   )
 }

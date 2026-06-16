@@ -105,6 +105,7 @@
 }
 
 .home-pc-nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -118,8 +119,25 @@
   text-align: left;
   cursor: pointer;
   transition:
-    background-color 0.2s var(--ease-soft),
-    color 0.2s var(--ease-soft);
+    background var(--motion-fast) var(--ease-soft),
+    color var(--motion-fast) var(--ease-soft);
+}
+
+.home-pc-nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 0;
+  background: var(--c-primary);
+  border-radius: 0 2px 2px 0;
+  transition: height var(--motion-base) var(--ease-soft);
+}
+
+.home-pc-nav-item--active::before {
+  height: 60%;
 }
 
 .home-pc-nav-item svg {

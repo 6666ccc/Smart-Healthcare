@@ -16,6 +16,15 @@ import {
 import './index.css'
 import '../../Home/pc/index.css'
 
+/**
+ * 个人中心专用 PC 布局
+ *
+ * 与共享 PcLayout 的差异：
+ * - 头部中央显示 "个人中心" 而非搜索框
+ * - 侧边栏底部显示 "退出登录" 而非 AI 助手按钮
+ * - 用户头像不可点击（当前已在 /user）
+ * - 医院名点击可返回首页
+ */
 export default function UserPcLayout({ children }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()

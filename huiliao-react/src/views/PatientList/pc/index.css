@@ -10,7 +10,10 @@
 .pat-pc-card {
   display: flex; align-items: flex-start; justify-content: space-between;
   background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.25rem;
+  transition: transform .15s var(--ease-soft),box-shadow .15s var(--ease-soft);
 }
+
+.pat-pc-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.05)}
 .pat-pc-card-body { display: flex; flex-direction: column; gap: .35rem; flex: 1; }
 .pat-pc-card-top { display: flex; align-items: center; gap: .5rem; }
 .pat-pc-card-top strong { font-size: 1rem; color: #1f2937; }

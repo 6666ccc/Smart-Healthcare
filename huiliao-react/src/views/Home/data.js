@@ -51,7 +51,6 @@ export const SIDEBAR_NAV_BY_PORTAL = {
     { id: 'home', label: '工作台', path: '/home', icon: 'home' },
     { id: 'consultation', label: '接诊管理', path: '/consultation', icon: 'chat' },
     { id: 'registration', label: '排班查看', path: '/registration', icon: 'calendar' },
-    { id: 'report', label: '检查报告', path: '/consultation', icon: 'report' },
   ],
   [PORTAL.PATIENT]: [
     { id: 'home', label: '首页', path: '/home', icon: 'home' },
@@ -96,15 +95,3 @@ export const QUICK_ACTIONS_BY_PORTAL = {
     { id: 'health', title: '健康档案', desc: '就诊记录', path: '/user', icon: 'folder' },
   ],
 }
-
-/** @deprecated 使用 MOBILE_TABS_BY_PORTAL */
-export const MOBILE_TABS = MOBILE_TABS_BY_PORTAL[PORTAL.ADMIN]
-
-/** @deprecated 使用 SIDEBAR_NAV_BY_PORTAL */
-export const SIDEBAR_NAV = SIDEBAR_NAV_BY_PORTAL[PORTAL.ADMIN]
-
-/** @deprecated 使用 SIDEBAR_BOTTOM_BY_PORTAL */
-export const SIDEBAR_BOTTOM = SIDEBAR_BOTTOM_BY_PORTAL[PORTAL.ADMIN]
-
-/** @deprecated 使用 QUICK_ACTIONS_BY_PORTAL */
-export const QUICK_ACTIONS = QUICK_ACTIONS_BY_PORTAL[PORTAL.ADMIN]

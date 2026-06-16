@@ -46,10 +46,10 @@
   background: #fff;
   border: 1px solid #e5e5e5;
   border-radius: 12px;
-  transition: box-shadow 0.15s;
+  transition: transform .15s var(--ease-soft),box-shadow .15s var(--ease-soft);
 }
 
-.pay-pc-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.pay-pc-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.05)}
 
 .pay-pc-card-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .pay-pc-card-body strong { font-size: 15px; font-weight: 600; color: #0d0d0d; }

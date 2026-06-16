@@ -7,11 +7,35 @@
   --c-success:#5a9e8f;--c-success-bg:#d1fae5;
   --radius:8px;--radius-lg:12px;
   --ease-soft:cubic-bezier(0.22,1,0.36,1);
+  --motion-fast:0.15s;--motion-base:0.28s;--motion-slow:0.45s;--motion-gentle:0.6s;
+  --ease-out:cubic-bezier(0.16,1,0.3,1);--ease-in-out:cubic-bezier(0.65,0,0.35,1);
 }
 body{font-family:"PingFang SC","Microsoft YaHei",-apple-system,system-ui,sans-serif;color:var(--c-text);background:var(--c-bg);-webkit-font-smoothing:antialiased;line-height:1.5}
 button{cursor:pointer;font:inherit;border:none;background:none;color:inherit}
 a{color:inherit;text-decoration:none}
 input,select,textarea{font:inherit}
+
+@keyframes fadeUpIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes modalIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes skeletonPulse{0%,100%{opacity:.6}50%{opacity:1}}
+@keyframes tabPop{0%{transform:scale(.95)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes indicatorSlide{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+.anim-fade-up{animation:fadeUpIn var(--motion-slow) var(--ease-soft) both}
+.anim-modal-in{animation:modalIn var(--motion-base) var(--ease-out) both}
+.anim-stagger>*{opacity:0}
+.anim-stagger.anim-visible>*{animation:fadeUpIn var(--motion-slow) var(--ease-soft) both}
+.anim-stagger.anim-visible>:nth-child(1){animation-delay:0.05s}
+.anim-stagger.anim-visible>:nth-child(2){animation-delay:0.1s}
+.anim-stagger.anim-visible>:nth-child(3){animation-delay:0.15s}
+.anim-stagger.anim-visible>:nth-child(4){animation-delay:0.2s}
+.anim-stagger.anim-visible>:nth-child(5){animation-delay:0.25s}
+.anim-stagger.anim-visible>:nth-child(6){animation-delay:0.3s}
+.anim-stagger.anim-visible>:nth-child(7){animation-delay:0.35s}
+.anim-stagger.anim-visible>:nth-child(8){animation-delay:0.4s}
+.anim-stagger.anim-visible>:nth-child(9){animation-delay:0.45s}
+.anim-stagger.anim-visible>:nth-child(10){animation-delay:0.5s}
 
 /* ---- 共享组件样式 ---- */
 .shared-empty{text-align:center;padding:3rem 1rem;color:var(--c-muted);font-size:.9rem}
@@ -24,8 +48,15 @@ input,select,textarea{font:inherit}
 .shared-btn-submit{
   padding:.5rem 1.2rem;border-radius:var(--radius);border:none;
   background:var(--c-primary);color:#fff;font-weight:600;font-size:.85rem;cursor:pointer;
+  transition:background var(--motion-fast) var(--ease-soft),transform var(--motion-fast) var(--ease-soft);
 }
-.shared-btn-submit:hover{background:var(--c-primary-hover)}
+.shared-btn-submit:hover:not(:disabled){
+  background:var(--c-primary-hover);
+  transform:scale(1.03);
+}
+.shared-btn-submit:active:not(:disabled){
+  transform:scale(.98);
+}
 .shared-btn-submit:disabled,.shared-btn-cancel:disabled{opacity:.5;cursor:not-allowed}
 .shared-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:100}
 .shared-modal{background:var(--c-white);border-radius:var(--radius-lg);padding:1.5rem 2rem;min-width:320px;max-width:90vw;max-height:90vh;overflow-y:auto}
@@ -44,3 +75,26 @@ input,select,textarea{font:inherit}
 .shared-status--refund{background:var(--c-warning-bg);color:var(--c-warning)}
 .shared-status--open{background:var(--c-success-bg);color:var(--c-success)}
 .shared-status--closed{background:#f3f4f6;color:var(--c-muted)}
+
+/* ---- 骨架屏 ---- */
+.skeleton{
+  background:linear-gradient(90deg,var(--c-border) 25%,var(--c-bg) 50%,var(--c-border) 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.5s infinite;
+  border-radius:4px;
+}
+.skeleton--text{height:14px;margin-bottom:8px;width:100%}
+.skeleton--text:last-child{width:60%}
+.skeleton--heading{height:22px;width:40%;margin-bottom:16px}
+.skeleton--card{height:72px;margin-bottom:10px;border-radius:var(--radius)}
+@media (max-width:1023px){
+  .skeleton{animation:skeletonPulse 1.5s var(--ease-in-out) infinite}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:0.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:0.01ms!important;
+  }
+}
