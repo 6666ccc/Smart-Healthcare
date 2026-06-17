@@ -87,3 +87,8 @@ def get_log_level() -> str:
 def get_log_file() -> str | None:
     path = (os.getenv("AI_LOG_FILE") or "").strip()
     return path or None
+
+
+def get_app_timezone() -> str:
+    """应用时区，用于向 LLM 注入「当前时间」上下文。默认东八区。"""
+    return (os.getenv("APP_TIMEZONE") or "Asia/Shanghai").strip()

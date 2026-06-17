@@ -9,6 +9,7 @@ import com.example.huiliao.entity.Registration;
 import com.example.huiliao.mapper.OutpatientVisitMapper;
 import com.example.huiliao.mapper.RegistrationMapper;
 import com.example.huiliao.service.VisitService;
+import com.example.huiliao.service.support.CurrentStaffSupport;
 import com.example.huiliao.vo.VisitVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class VisitServiceImpl implements VisitService {
 
     private final OutpatientVisitMapper visitMapper;
     private final RegistrationMapper registrationMapper;
+    private final CurrentStaffSupport currentStaffSupport;
 
     @Override
     public List<VisitVO> list(Integer status, Long staffId) {
@@ -35,6 +37,7 @@ public class VisitServiceImpl implements VisitService {
         if (vo == null) {
             throw new BusinessException("就诊记录不存在");
         }
+        currentStaffSupport.assertOwnsStaff(vo.getStaffId());
         return vo;
     }
 
@@ -48,6 +51,7 @@ public class VisitServiceImpl implements VisitService {
         if (reg.getStatus() != BizStatus.REG_REGISTERED) {
             throw new BusinessException("挂号单状态不允许接诊");
         }
+        currentStaffSupport.assertOwnsStaff(reg.getStaffId());
         OutpatientVisit existing = visitMapper.selectByRegistrationId(registrationId);
         if (existing != null) {
             return existing.getId();
@@ -70,6 +74,7 @@ public class VisitServiceImpl implements VisitService {
         if (visit == null) {
             throw new BusinessException("就诊记录不存在");
         }
+        currentStaffSupport.assertOwnsStaff(visit.getStaffId());
         if (dto.getChiefComplaint() != null) {
             visit.setChiefComplaint(dto.getChiefComplaint());
         }

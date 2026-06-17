@@ -1,6 +1,17 @@
+/**
+ * Axios 实例 + 拦截器
+ * 基址通过 Vite proxy → localhost:8080
+ */
 import axios from 'axios'
 
-export const TOKEN_KEY = 'huiliao_token'
+const request = axios.create({
+  baseURL: '',           // Vite proxy handles /api → localhost:8080
+  timeout: 15000,
+  headers: { 'Content-Type': 'application/json' },
+})
+
+/* ---------- Token 存取 ---------- */
+const TOKEN_KEY = 'huiliao_token'
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
@@ -14,52 +25,47 @@ export function setToken(token) {
   }
 }
 
-export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY)
-}
-
-const request = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
-  timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-const NO_AUTH_PATHS = ['/api/health', '/api/auth/login']
+/* ---------- 请求拦截器 ---------- */
+const SKIP_AUTH = ['/api/health', '/api/auth/login', '/api/auth/register']
 
 request.interceptors.request.use((config) => {
-  const skipAuth =
-    config.skipAuth || NO_AUTH_PATHS.some((path) => config.url?.startsWith(path))
-
-  if (!skipAuth) {
+  const skip = SKIP_AUTH.some((p) => config.url?.includes(p))
+  if (!skip) {
     const token = getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
       config.headers['X-Token'] = token
     }
   }
-
   return config
 })
 
+/* ---------- 响应拦截器 ---------- */
 request.interceptors.response.use(
-  (response) => {
-    const body = response.data
-
-    if (body && typeof body.code === 'number') {
-      if (body.code === 200) {
-        return body.data
-      }
-      return Promise.reject(new Error(body.message || '请求失败'))
+  (res) => {
+    const body = res.data
+    if (body && body.code === 200) {
+      return body.data
     }
-
-    return body
+    return Promise.reject(new Error(body?.message || '请求失败'))
   },
-  (error) => {
-    const message =
-      error.response?.data?.message || error.message || '网络异常，请稍后重试'
-    return Promise.reject(new Error(message))
+  (err) => {
+    if (err.response) {
+      const { status, data } = err.response
+      if (status === 401) {
+        // Token 失效 → 清理并跳转登录
+        setToken(null)
+        localStorage.removeItem('huiliao_user')
+        window.location.href = '/login'
+        return Promise.reject(new Error('登录已过期，请重新登录'))
+      }
+      const msg = data?.message || `服务器错误 (${status})`
+      return Promise.reject(new Error(msg))
+    }
+    if (err.code === 'ECONNABORTED') {
+      return Promise.reject(new Error('请求超时'))
+    }
+    return Promise.reject(new Error('网络异常，请检查网络连接'))
   },
 )
 

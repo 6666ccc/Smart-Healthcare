@@ -4,6 +4,7 @@ import com.example.huiliao.common.Result;
 import com.example.huiliao.common.constant.BizStatus;
 import com.example.huiliao.dto.RegistrationCreateDTO;
 import com.example.huiliao.service.RegistrationService;
+import com.example.huiliao.service.support.CurrentStaffSupport;
 import com.example.huiliao.vo.RegistrationVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,23 +18,35 @@ import java.util.List;
 public class RegistrationController {
 
     private final RegistrationService registrationService;
+    private final CurrentStaffSupport currentStaffSupport;
 
+    // 查询挂号列表
     @GetMapping
     public Result<List<RegistrationVO>> list(@RequestParam(required = false) Long patientId,
+                                             @RequestParam(required = false) Long userId,
+                                             @RequestParam(required = false) Long registrantUserId,
+                                             @RequestParam(required = false) Long staffId,
                                              @RequestParam(required = false) Integer status) {
-        return Result.success(registrationService.list(patientId, status));
+        Long effectiveStaffId = currentStaffSupport.resolveStaffId(staffId);
+        return Result.success(registrationService.list(
+                patientId, userId, registrantUserId, effectiveStaffId, status));
     }
 
+    // 查询待就诊挂号（医生端：自动按当前登录医生过滤）
     @GetMapping("/pending")
-    public Result<List<RegistrationVO>> pending() {
-        return Result.success(registrationService.list(null, BizStatus.REG_REGISTERED));
+    public Result<List<RegistrationVO>> pending(@RequestParam(required = false) Long staffId) {
+        Long effectiveStaffId = currentStaffSupport.resolveStaffId(staffId);
+        return Result.success(registrationService.list(
+                null, null, null, effectiveStaffId, BizStatus.REG_REGISTERED));
     }
 
+    // 挂号
     @PostMapping
     public Result<Long> register(@Valid @RequestBody RegistrationCreateDTO dto) {
         return Result.success(registrationService.register(dto));
     }
 
+    // 取消挂号
     @PostMapping("/{id}/cancel")
     public Result<Void> cancel(@PathVariable Long id) {
         registrationService.cancel(id);

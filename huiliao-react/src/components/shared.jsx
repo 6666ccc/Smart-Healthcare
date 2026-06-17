@@ -1,41 +1,51 @@
 /**
- * 共享 UI 组件：加载中、空状态、确认弹窗、状态标签
+ * 共享 UI 组件
  */
 
+/* ---------- Loading ---------- */
 export function Loading({ text = '加载中…' }) {
-  return <p className="shared-empty">{text}</p>
-}
-
-export function Empty({ text = '暂无数据' }) {
-  return <p className="shared-empty">{text}</p>
-}
-
-/**
- * 确认弹窗：用 window.confirm 的声明式封装
- * 仅在 show=true 时展示按钮，实际确认仍用 confirm()
- */
-export function ConfirmDialog({ show, title, message, onConfirm, onCancel, confirmText = '确认', cancelText = '取消', loading = false }) {
-  if (!show) return null
   return (
-    <div className="shared-overlay" onClick={onCancel}>
-      <div className="shared-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{title}</h2>
-        {message && <p className="shared-modal-msg">{message}</p>}
-        <div className="shared-modal-actions">
-          <button type="button" className="shared-btn-cancel" disabled={loading} onClick={onCancel}>{cancelText}</button>
-          <button type="button" className="shared-btn-submit" disabled={loading} onClick={onConfirm}>{loading ? '处理中…' : confirmText}</button>
-        </div>
-      </div>
+    <div className="shared-loading">
+      <div className="shared-loading__spinner" />
+      <span className="shared-loading__text">{text}</span>
     </div>
   )
 }
 
-/**
- * 状态标签 Badge
- */
+/* ---------- Empty ---------- */
+export function Empty({ text = '暂无数据', icon = '📋' }) {
+  return (
+    <div className="shared-empty">
+      <span className="shared-empty__icon">{icon}</span>
+      <span className="shared-empty__text text-sub">{text}</span>
+    </div>
+  )
+}
+
+/* ---------- StatusBadge ---------- */
 export function StatusBadge({ status, map, fallback = '未知' }) {
   const info = map?.[status]
-  const label = info?.label ?? fallback
-  const cls = info?.cls ?? ''
-  return <span className={`shared-status shared-status--${cls}`}>{label}</span>
+  if (!info) return <span className="shared-status shared-status--cancelled">{fallback}</span>
+  return <span className={`shared-status ${info.cls}`}>{info.label}</span>
+}
+
+/* ---------- ConfirmDialog ---------- */
+export function ConfirmDialog({ show, title, message, onConfirm, onCancel, loading }) {
+  if (!show) return null
+  return (
+    <div className="shared-dialog-overlay" onClick={onCancel}>
+      <div className="shared-dialog" onClick={(e) => e.stopPropagation()}>
+        <h3>{title || '确认操作'}</h3>
+        <p>{message}</p>
+        <div className="shared-dialog__actions">
+          <button className="btn btn--ghost" onClick={onCancel} disabled={loading}>
+            取消
+          </button>
+          <button className="btn btn--primary" onClick={onConfirm} disabled={loading}>
+            {loading ? '处理中…' : '确认'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }

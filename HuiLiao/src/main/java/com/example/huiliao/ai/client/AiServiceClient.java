@@ -4,8 +4,10 @@ import com.example.huiliao.ai.config.AiServiceProperties;
 import com.example.huiliao.ai.dto.ChatRequestDTO;
 import com.example.huiliao.ai.exception.AiServiceException;
 import com.example.huiliao.ai.vo.ChatResponseVO;
-import lombok.RequiredArgsConstructor;
+import com.example.huiliao.ai.vo.ChatStreamEventVO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -14,15 +16,16 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
- * AI 服务客户端，调用 Python FastAPI（{@code POST /v1/chat}、{@code GET /health}）。
+ * AI 服务客户端，调用 Python FastAPI（聊天、健康检查）。
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class AiServiceClient {
 
     private static final ParameterizedTypeReference<Map<String, String>> HEALTH_BODY =
@@ -30,7 +33,20 @@ public class AiServiceClient {
             };
 
     private final RestClient aiRestClient;
+    private final RestClient aiStreamRestClient;
     private final AiServiceProperties properties;
+    private final ObjectMapper objectMapper;
+
+    public AiServiceClient(
+            @Qualifier("aiRestClient") RestClient aiRestClient,
+            @Qualifier("aiStreamRestClient") RestClient aiStreamRestClient,
+            AiServiceProperties properties,
+            ObjectMapper objectMapper) {
+        this.aiRestClient = aiRestClient;
+        this.aiStreamRestClient = aiStreamRestClient;
+        this.properties = properties;
+        this.objectMapper = objectMapper;
+    }
 
     /**
      * 调用 FastAPI {@code POST /v1/chat}，请求体会夹带用户/患者上下文，响应 {@code {"reply": "..."}}。
@@ -63,6 +79,59 @@ public class AiServiceClient {
             throw ex;
         } catch (RestClientException ex) {
             throw new AiServiceException("无法连接 AI 服务，请确认 FastAPI 已启动", ex);
+        }
+    }
+
+    /**
+     * 调用 FastAPI {@code POST /v1/chat/stream}，按 SSE 行解析并回调消费者。
+     */
+    public void streamChat(ChatRequestDTO request, ChatStreamConsumer consumer) {
+        if (request == null || !StringUtils.hasText(request.getMessage())) {
+            throw new AiServiceException("消息不能为空");
+        }
+        request.setMessage(request.getMessage().trim());
+
+        log.debug("流式调用 AI: POST {}{}", properties.getBaseUrl(), properties.getChatStreamPath());
+        try {
+            aiStreamRestClient.post()
+                    .uri(properties.getChatStreamPath())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.TEXT_EVENT_STREAM)
+                    .body(request)
+                    .exchange((req, res) -> {
+                        if (res.getStatusCode().isError()) {
+                            String detail = readBody(res.getBody());
+                            throw new AiServiceException(
+                                    "AI 流式服务响应异常: HTTP " + res.getStatusCode().value()
+                                            + (detail.isEmpty() ? "" : " - " + detail));
+                        }
+                        try (BufferedReader reader = new BufferedReader(
+                                new InputStreamReader(res.getBody(), StandardCharsets.UTF_8))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                if (!line.startsWith("data:")) {
+                                    continue;
+                                }
+                                String payload = line.substring(5).trim();
+                                if (payload.isEmpty()) {
+                                    continue;
+                                }
+                                ChatStreamEventVO event = objectMapper.readValue(
+                                        payload, ChatStreamEventVO.class);
+                                if (event != null && event.getType() != null) {
+                                    consumer.accept(event);
+                                }
+                            }
+                        }
+                        return null;
+                    });
+        } catch (AiServiceException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            if (ex instanceof RestClientException restEx) {
+                throw new AiServiceException("无法连接 AI 流式服务，请确认 FastAPI 已启动", restEx);
+            }
+            throw new AiServiceException("AI 流式响应解析失败", ex);
         }
     }
 

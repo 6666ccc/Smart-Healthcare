@@ -2,6 +2,7 @@ package com.example.huiliao.controller;
 
 import com.example.huiliao.common.Result;
 import com.example.huiliao.dto.LoginDTO;
+import com.example.huiliao.dto.RegisterDTO;
 import com.example.huiliao.service.AuthService;
 import com.example.huiliao.vo.LoginVO;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +24,11 @@ public class AuthController {
     @PostMapping("/login")
     public Result<LoginVO> login(@Valid @RequestBody LoginDTO dto) {
         return Result.success(authService.login(dto));
+    }
+
+    @PostMapping("/register")
+    public Result<LoginVO> register(@Valid @RequestBody RegisterDTO dto) {
+        return Result.success(authService.register(dto));
     }
 
     @PostMapping("/logout")

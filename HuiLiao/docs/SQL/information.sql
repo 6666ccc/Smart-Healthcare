@@ -213,12 +213,70 @@ ON DUPLICATE KEY UPDATE
     price     = VALUES(price);
 
 -- ============================================================
+-- 9B. 更多诊疗项目（丰富检验/检查/治疗）
+-- ============================================================
+INSERT INTO medical_item (item_code, item_name, item_type, price, dept_id, status) VALUES
+-- 检验（2）：常规/生化/免疫
+('EX006', '尿常规',                   2, 15.00,  NULL, 1),
+('EX007', '大便常规',                 2, 12.00,  NULL, 1),
+('EX008', '血脂全项（4项）',           2, 80.00,  NULL, 1),
+('EX009', '肾功能三项',               2, 60.00,  NULL, 1),
+('EX010', '甲状腺功能五项',           2, 180.00, NULL, 1),
+('EX011', '空腹血糖',                 2, 10.00,  NULL, 1),
+('EX012', '凝血功能四项',             2, 70.00,  NULL, 1),
+('EX013', '肿瘤标志物筛查（男8项）',   2, 380.00, NULL, 1),
+('EX014', '肿瘤标志物筛查（女8项）',   2, 420.00, NULL, 1),
+('EX015', '超敏C反应蛋白',            2, 45.00,  NULL, 1),
+('EX016', '电解质六项',               2, 55.00,  NULL, 1),
+('EX017', '心肌酶谱四项',             2, 100.00, NULL, 1),
+('EX018', '糖化血红蛋白',             2, 60.00,  NULL, 1),
+('EX019', '乙肝五项（定量）',          2, 50.00,  NULL, 1),
+('EX020', '梅毒血清学检测',           2, 40.00,  NULL, 1),
+('EX021', 'HIV抗体初筛',             2, 35.00,  NULL, 1),
+('EX022', '血沉（ESR）',             2, 18.00,  NULL, 1),
+('EX023', '降钙素原（PCT）',          2, 120.00, NULL, 1),
+('EX024', 'D-二聚体测定',            2, 90.00,  NULL, 1),
+('EX025', '凝血酶原时间（PT）',       2, 25.00,  NULL, 1),
+-- 检查（1）：影像/内镜/功能
+('EX026', '胸部X光（DR正位）',        1, 80.00,  NULL, 1),
+('EX027', '颈椎MRI平扫',             1, 650.00, NULL, 1),
+('EX028', '腰椎CT平扫',              1, 320.00, NULL, 1),
+('EX029', '心脏彩色超声',             1, 250.00, NULL, 1),
+('EX030', '甲状腺B超',               1, 150.00, NULL, 1),
+('EX031', '乳腺B超',                 1, 140.00, NULL, 1),
+('EX032', '胃镜（普通）',            1, 300.00, NULL, 1),
+('EX033', '肠镜（普通）',            1, 380.00, NULL, 1),
+('EX034', '脑电图',                  1, 120.00, NULL, 1),
+('EX035', '肺功能测定',              1, 90.00,  NULL, 1),
+('EX036', '骨密度检测',              1, 100.00, NULL, 1),
+('EX037', '24小时动态心电图',         1, 200.00, NULL, 1),
+('EX038', '颈动脉彩超',              1, 220.00, NULL, 1),
+('EX039', '泌尿系B超',               1, 160.00, NULL, 1),
+('EX040', '子宫附件B超',             1, 150.00, NULL, 1),
+-- 治疗（3）：处置/康复/中医
+('TR004', '针灸治疗（次）',           3, 80.00,  NULL, 1),
+('TR005', '推拿按摩（次）',           3, 100.00, NULL, 1),
+('TR006', '拔罐治疗',                3, 40.00,  NULL, 1),
+('TR007', '静脉输液（组）',          3, 25.00,  NULL, 1),
+('TR008', '雾化吸入（次）',          3, 35.00,  NULL, 1),
+('TR009', '低流量吸氧（小时）',       3, 8.00,   NULL, 1),
+('TR010', '心理治疗（30分钟）',       3, 120.00, NULL, 1),
+('TR011', '中频脉冲理疗（部位）',     3, 50.00,  NULL, 1),
+('TR012', '关节腔穿刺注射',          3, 150.00, NULL, 1),
+('TR013', '石膏固定（上肢）',        3, 180.00, NULL, 1),
+('TR014', '伤口换药（大）',          3, 55.00,  NULL, 1),
+('TR015', '术后拆线',                3, 40.00,  NULL, 1)
+ON DUPLICATE KEY UPDATE
+    item_name = VALUES(item_name),
+    price     = VALUES(price);
+
+-- ============================================================
 -- 10. 排班号源（各科室 × 上下午 × 三天）
 -- ============================================================
 INSERT INTO schedule (dept_id, staff_id, work_date, time_period, total_count, remaining_count, register_fee)
 SELECT * FROM (
     -- 内科 张伟 - 今天下午、明天上午、后天上午
-    SELECT d.id, s.id, @today,    '下午', 15, 12, 10.00 FROM dept d, staff s WHERE d.dept_code = 'NK' AND s.staff_no = 'D001'
+    SELECT d.id dept_id, s.id staff_id, @today work_date, '下午' time_period, 15 total_count, 12 remaining_count, 10.00 register_fee FROM dept d, staff s WHERE d.dept_code = 'NK' AND s.staff_no = 'D001'
     UNION ALL SELECT d.id, s.id, @tomorrow, '上午', 20, 20, 10.00 FROM dept d, staff s WHERE d.dept_code = 'NK' AND s.staff_no = 'D001'
     UNION ALL SELECT d.id, s.id, @day2,     '上午', 20, 20, 10.00 FROM dept d, staff s WHERE d.dept_code = 'NK' AND s.staff_no = 'D001'
     -- 外科 刘芳 - 明天上下午、后天上午
@@ -238,8 +296,8 @@ ON DUPLICATE KEY UPDATE
 --     REG01-03 已就诊（含就诊记录）| REG04 已挂号（待就诊）| REG05 已退号
 -- ============================================================
 -- 已就诊：内科 王小明（昨日）
-INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id)
-SELECT 'REG20260001', p.id, sch.id, sch.dept_id, sch.staff_id, @yesterday + INTERVAL 8 HOUR, sch.register_fee, 2, u.id
+INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id, registrant_user_id)
+SELECT 'REG20260001', p.id, sch.id, sch.dept_id, sch.staff_id, @yesterday + INTERVAL 8 HOUR, sch.register_fee, 2, u.id, NULL
 FROM patient p, sys_user u, schedule sch, dept d, staff s
 WHERE p.patient_no = 'P20260001' AND u.username = 'cashier01'
   AND d.dept_code = 'NK' AND s.staff_no = 'D001'
@@ -248,8 +306,8 @@ LIMIT 1
 ON DUPLICATE KEY UPDATE status = VALUES(status);
 
 -- 已就诊：外科 李小红（昨天下午）
-INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id)
-SELECT 'REG20260002', p.id, sch.id, sch.dept_id, sch.staff_id, @yesterday + INTERVAL 14 HOUR, sch.register_fee, 2, u.id
+INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id, registrant_user_id)
+SELECT 'REG20260002', p.id, sch.id, sch.dept_id, sch.staff_id, @yesterday + INTERVAL 14 HOUR, sch.register_fee, 2, u.id, NULL
 FROM patient p, sys_user u, schedule sch, dept d, staff s
 WHERE p.patient_no = 'P20260002' AND u.username = 'cashier01'
   AND d.dept_code = 'WK' AND s.staff_no = 'D002'
@@ -258,8 +316,8 @@ LIMIT 1
 ON DUPLICATE KEY UPDATE status = VALUES(status);
 
 -- 已就诊：儿科 赵小刚（昨天下午）
-INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id)
-SELECT 'REG20260003', p.id, sch.id, sch.dept_id, sch.staff_id, @yesterday + INTERVAL 15 HOUR, sch.register_fee, 2, u.id
+INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id, registrant_user_id)
+SELECT 'REG20260003', p.id, sch.id, sch.dept_id, sch.staff_id, @yesterday + INTERVAL 15 HOUR, sch.register_fee, 2, u.id, NULL
 FROM patient p, sys_user u, schedule sch, dept d, staff s
 WHERE p.patient_no = 'P20260003' AND u.username = 'cashier02'
   AND d.dept_code = 'EK' AND s.staff_no = 'D003'
@@ -268,8 +326,8 @@ LIMIT 1
 ON DUPLICATE KEY UPDATE status = VALUES(status);
 
 -- 已挂号（待就诊）：内科 王小明（今天下午的号）
-INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id)
-SELECT 'REG20260004', p.id, sch.id, sch.dept_id, sch.staff_id, NOW(), sch.register_fee, 1, u.id
+INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id, registrant_user_id)
+SELECT 'REG20260004', p.id, sch.id, sch.dept_id, sch.staff_id, NOW(), sch.register_fee, 1, u.id, NULL
 FROM patient p, sys_user u, schedule sch, dept d, staff s
 WHERE p.patient_no = 'P20260001' AND u.username = 'cashier01'
   AND d.dept_code = 'NK' AND s.staff_no = 'D001'
@@ -278,8 +336,8 @@ LIMIT 1
 ON DUPLICATE KEY UPDATE status = VALUES(status);
 
 -- 已挂号：儿科 刘翠花（今天下午）
-INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id)
-SELECT 'REG20260005', p.id, sch.id, sch.dept_id, sch.staff_id, NOW(), sch.register_fee, 1, u.id
+INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id, registrant_user_id)
+SELECT 'REG20260005', p.id, sch.id, sch.dept_id, sch.staff_id, NOW(), sch.register_fee, 1, u.id, NULL
 FROM patient p, sys_user u, schedule sch, dept d, staff s
 WHERE p.patient_no = 'P20260004' AND u.username = 'cashier02'
   AND d.dept_code = 'EK' AND s.staff_no = 'D003'
@@ -288,8 +346,8 @@ LIMIT 1
 ON DUPLICATE KEY UPDATE status = VALUES(status);
 
 -- 已退号：孙建国（外科 明天上午 → 后来取消了）
-INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id)
-SELECT 'REG20260006', p.id, sch.id, sch.dept_id, sch.staff_id, NOW(), sch.register_fee, 3, u.id
+INSERT INTO registration (reg_no, patient_id, schedule_id, dept_id, staff_id, reg_time, reg_fee, status, cashier_id, registrant_user_id)
+SELECT 'REG20260006', p.id, sch.id, sch.dept_id, sch.staff_id, NOW(), sch.register_fee, 3, u.id, NULL
 FROM patient p, sys_user u, schedule sch, dept d, staff s
 WHERE p.patient_no = 'P20260005' AND u.username = 'cashier01'
   AND d.dept_code = 'WK' AND s.staff_no = 'D002'
@@ -415,6 +473,60 @@ WHERE o.order_no = 'CHG20260004' AND r.reg_no = 'REG20260004'
 LIMIT 1
 ON DUPLICATE KEY UPDATE amount = VALUES(amount);
 
+-- 王小明 - 超敏C反应蛋白 + 胸部X光（已支付）
+INSERT INTO charge_order (order_no, patient_id, visit_id, total_amount, paid_amount, pay_type, pay_status, cashier_id, pay_time)
+SELECT 'CHG20260005', v.patient_id, v.id, 45.00 + 80.00, 45.00 + 80.00, 2, 1, u.id, @yesterday + INTERVAL 10 HOUR
+FROM outpatient_visit v, sys_user u
+WHERE v.visit_no = 'VIS20260001' AND u.username = 'cashier02'
+LIMIT 1
+ON DUPLICATE KEY UPDATE pay_status = VALUES(pay_status);
+
+INSERT INTO charge_detail (charge_order_id, biz_type, biz_id, item_name, amount)
+SELECT o.id, 3, m.id, m.item_name, m.price
+FROM charge_order o, medical_item m
+WHERE o.order_no = 'CHG20260005' AND m.item_code = 'EX015'
+UNION ALL
+SELECT o.id, 3, m.id, m.item_name, m.price
+FROM charge_order o, medical_item m
+WHERE o.order_no = 'CHG20260005' AND m.item_code = 'EX026'
+ON DUPLICATE KEY UPDATE amount = VALUES(amount);
+
+-- 李小红 - 血常规 + 凝血功能四项（已支付）
+INSERT INTO charge_order (order_no, patient_id, visit_id, total_amount, paid_amount, pay_type, pay_status, cashier_id, pay_time)
+SELECT 'CHG20260006', v.patient_id, v.id, 25.00 + 70.00, 25.00 + 70.00, 2, 1, u.id, @yesterday + INTERVAL 15 HOUR
+FROM outpatient_visit v, sys_user u
+WHERE v.visit_no = 'VIS20260002' AND u.username = 'cashier01'
+LIMIT 1
+ON DUPLICATE KEY UPDATE pay_status = VALUES(pay_status);
+
+INSERT INTO charge_detail (charge_order_id, biz_type, biz_id, item_name, amount)
+SELECT o.id, 3, m.id, m.item_name, m.price
+FROM charge_order o, medical_item m
+WHERE o.order_no = 'CHG20260006' AND m.item_code = 'EX001'
+UNION ALL
+SELECT o.id, 3, m.id, m.item_name, m.price
+FROM charge_order o, medical_item m
+WHERE o.order_no = 'CHG20260006' AND m.item_code = 'EX012'
+ON DUPLICATE KEY UPDATE amount = VALUES(amount);
+
+-- 赵小刚 - 大便常规 + 电解质六项（已支付）
+INSERT INTO charge_order (order_no, patient_id, visit_id, total_amount, paid_amount, pay_type, pay_status, cashier_id, pay_time)
+SELECT 'CHG20260007', v.patient_id, v.id, 12.00 + 55.00, 12.00 + 55.00, 1, 1, u.id, @yesterday + INTERVAL 17 HOUR
+FROM outpatient_visit v, sys_user u
+WHERE v.visit_no = 'VIS20260003' AND u.username = 'cashier02'
+LIMIT 1
+ON DUPLICATE KEY UPDATE pay_status = VALUES(pay_status);
+
+INSERT INTO charge_detail (charge_order_id, biz_type, biz_id, item_name, amount)
+SELECT o.id, 3, m.id, m.item_name, m.price
+FROM charge_order o, medical_item m
+WHERE o.order_no = 'CHG20260007' AND m.item_code = 'EX007'
+UNION ALL
+SELECT o.id, 3, m.id, m.item_name, m.price
+FROM charge_order o, medical_item m
+WHERE o.order_no = 'CHG20260007' AND m.item_code = 'EX016'
+ON DUPLICATE KEY UPDATE amount = VALUES(amount);
+
 -- ============================================================
 -- 15. 检查检验申请（对应王小明/赵小刚的已就诊记录）
 -- ============================================================
@@ -470,6 +582,102 @@ FROM exam_request r WHERE r.request_no = 'EXR20260004'
 LIMIT 1
 ON DUPLICATE KEY UPDATE result_text = VALUES(result_text);
 
+-- 王小明 - 超敏C反应蛋白（已执行，有结果）
+INSERT INTO exam_request (request_no, visit_id, patient_id, item_id, amount, status)
+SELECT 'EXR20260005', v.id, v.patient_id, m.id, m.price, 3
+FROM outpatient_visit v, medical_item m
+WHERE v.visit_no = 'VIS20260001' AND m.item_code = 'EX015'
+LIMIT 1
+ON DUPLICATE KEY UPDATE status = VALUES(status);
+
+-- 王小明 - 胸部X光（已执行，有结果）
+INSERT INTO exam_request (request_no, visit_id, patient_id, item_id, amount, status)
+SELECT 'EXR20260006', v.id, v.patient_id, m.id, m.price, 3
+FROM outpatient_visit v, medical_item m
+WHERE v.visit_no = 'VIS20260001' AND m.item_code = 'EX026'
+LIMIT 1
+ON DUPLICATE KEY UPDATE status = VALUES(status);
+
+-- 李小红 - 血常规（已缴费，已执行，有结果）
+INSERT INTO exam_request (request_no, visit_id, patient_id, item_id, amount, status)
+SELECT 'EXR20260007', v.id, v.patient_id, m.id, m.price, 3
+FROM outpatient_visit v, medical_item m
+WHERE v.visit_no = 'VIS20260002' AND m.item_code = 'EX001'
+LIMIT 1
+ON DUPLICATE KEY UPDATE status = VALUES(status);
+
+-- 李小红 - 凝血功能四项（已缴费，待执行）
+INSERT INTO exam_request (request_no, visit_id, patient_id, item_id, amount, status)
+SELECT 'EXR20260008', v.id, v.patient_id, m.id, m.price, 2
+FROM outpatient_visit v, medical_item m
+WHERE v.visit_no = 'VIS20260002' AND m.item_code = 'EX012'
+LIMIT 1
+ON DUPLICATE KEY UPDATE status = VALUES(status);
+
+-- 赵小刚 - 大便常规（已缴费，已执行，有结果）
+INSERT INTO exam_request (request_no, visit_id, patient_id, item_id, amount, status)
+SELECT 'EXR20260009', v.id, v.patient_id, m.id, m.price, 3
+FROM outpatient_visit v, medical_item m
+WHERE v.visit_no = 'VIS20260003' AND m.item_code = 'EX007'
+LIMIT 1
+ON DUPLICATE KEY UPDATE status = VALUES(status);
+
+-- 赵小刚 - 电解质六项（已缴费，已执行，有结果）
+INSERT INTO exam_request (request_no, visit_id, patient_id, item_id, amount, status)
+SELECT 'EXR20260010', v.id, v.patient_id, m.id, m.price, 3
+FROM outpatient_visit v, medical_item m
+WHERE v.visit_no = 'VIS20260003' AND m.item_code = 'EX016'
+LIMIT 1
+ON DUPLICATE KEY UPDATE status = VALUES(status);
+
+-- ============================================================
+-- 16B. 更多检查结果
+-- ============================================================
+-- 王小明 - 超敏C反应蛋白结果
+INSERT INTO exam_result (request_id, result_text, report_time, technician_id)
+SELECT r.id,
+       '【超敏C反应蛋白】hs-CRP 28.5 mg/L ↑（参考 < 5.0）。提示：中度急性炎症反应，与临床表现一致。',
+       @yesterday + INTERVAL 10 HOUR, NULL
+FROM exam_request r WHERE r.request_no = 'EXR20260005'
+LIMIT 1
+ON DUPLICATE KEY UPDATE result_text = VALUES(result_text);
+
+-- 王小明 - 胸部X光结果
+INSERT INTO exam_result (request_id, result_text, report_time, technician_id)
+SELECT r.id,
+       '【胸部X光（DR正位）】双肺纹理增粗、增多，右下肺野可见片状模糊阴影。心影大小正常，纵隔无增宽，双侧肋膈角清晰。结论：右下肺感染征象，建议结合临床。',
+       @yesterday + INTERVAL 10 HOUR, NULL
+FROM exam_request r WHERE r.request_no = 'EXR20260006'
+LIMIT 1
+ON DUPLICATE KEY UPDATE result_text = VALUES(result_text);
+
+-- 李小红 - 血常规结果
+INSERT INTO exam_result (request_id, result_text, report_time, technician_id)
+SELECT r.id,
+       '【血常规】WBC 7.8×10^9/L（参考 4-10），RBC 4.2×10^12/L，Hb 138g/L，PLT 289×10^9/L，NEUT% 62%（参考 50-70），LYMPH% 30%（参考 20-40）。各项指标基本正常，无明显感染征象。',
+       @yesterday + INTERVAL 15 HOUR, NULL
+FROM exam_request r WHERE r.request_no = 'EXR20260007'
+LIMIT 1
+ON DUPLICATE KEY UPDATE result_text = VALUES(result_text);
+
+-- 赵小刚 - 大便常规结果
+INSERT INTO exam_result (request_id, result_text, report_time, technician_id)
+SELECT r.id,
+       '【大便常规】颜色：黄色，性状：稀水样，镜检：WBC 3-5/HP ↑（参考 0-2），RBC 0-1/HP，潜血：阴性（-），轮状病毒抗原：阳性（+）。结论：轮状病毒肠炎。',
+       @yesterday + INTERVAL 17 HOUR, NULL
+FROM exam_request r WHERE r.request_no = 'EXR20260009'
+LIMIT 1
+ON DUPLICATE KEY UPDATE result_text = VALUES(result_text);
+
+-- 赵小刚 - 电解质六项结果
+INSERT INTO exam_result (request_id, result_text, report_time, technician_id)
+SELECT r.id,
+       '【电解质六项】K+ 3.8 mmol/L（参考 3.5-5.3），Na+ 136 mmol/L ↓（参考 137-147），Cl- 98 mmol/L（参考 99-110），Ca2+ 2.35 mmol/L（参考 2.1-2.6），Mg2+ 0.85 mmol/L（参考 0.7-1.1），P 1.25 mmol/L（参考 0.81-1.45）。结论：轻度低钠血症，建议补液治疗。',
+       @yesterday + INTERVAL 17 HOUR, NULL
+FROM exam_request r WHERE r.request_no = 'EXR20260010'
+LIMIT 1
+ON DUPLICATE KEY UPDATE result_text = VALUES(result_text);
+
 -- ============================================================
 -- 17. 处方（对应已就诊的 3 位患者）
 -- ============================================================
@@ -487,7 +695,7 @@ FROM outpatient_visit v WHERE v.visit_no = 'VIS20260002'
 LIMIT 1
 ON DUPLICATE KEY UPDATE status = VALUES(status);
 
--- 赵小刚 - 蒙脱石散 + 口服补液盐（对应的就是 D008 蒙脱石散 + D007 头孢克肟）（已缴费已发药）
+-- 赵小刚 - 蒙脱石散 + 口服液盐（对应的就是 D008 蒙脱石散 + D007 头孢克肟）（已缴费已发药）
 INSERT INTO prescription (rx_no, visit_id, patient_id, staff_id, total_amount, status)
 SELECT 'RX20260003', v.id, v.patient_id, v.staff_id, 29.80, 3
 FROM outpatient_visit v WHERE v.visit_no = 'VIS20260003'
@@ -578,4 +786,26 @@ FROM sys_user u WHERE u.username = 'doctor01'
 UNION ALL
 SELECT u.id, '发药管理', '发药', '/api/dispense', '192.168.1.102', NOW() - INTERVAL 10 MINUTE
 FROM sys_user u WHERE u.username = 'pharma01'
+UNION ALL
+-- 检查检验日志
+SELECT u.id, '检查检验', '开具检查申请', '/api/exam-request', '192.168.1.101', @yesterday + INTERVAL 9 HOUR
+FROM sys_user u WHERE u.username = 'doctor01'
+UNION ALL
+SELECT u.id, '检查检验', '执行血常规', '/api/exam/result', '192.168.1.103', @yesterday + INTERVAL 9 HOUR
+FROM sys_user u WHERE u.username = 'cashier01'
+UNION ALL
+SELECT u.id, '检查检验', '执行胸部X光', '/api/exam/result', '192.168.1.103', @yesterday + INTERVAL 10 HOUR
+FROM sys_user u WHERE u.username = 'cashier01'
+UNION ALL
+SELECT u.id, '检查检验', '开具检查申请', '/api/exam-request', '192.168.1.101', @yesterday + INTERVAL 16 HOUR
+FROM sys_user u WHERE u.username = 'doctor03'
+UNION ALL
+SELECT u.id, '检查检验', '执行大便常规', '/api/exam/result', '192.168.1.103', @yesterday + INTERVAL 17 HOUR
+FROM sys_user u WHERE u.username = 'cashier02'
+UNION ALL
+SELECT u.id, '检查检验', '录入肝功能结果', '/api/exam/result', '192.168.1.103', @yesterday + INTERVAL 18 HOUR
+FROM sys_user u WHERE u.username = 'cashier02'
+UNION ALL
+SELECT u.id, '收费管理', '收取检查费', '/api/charge/pay', '192.168.1.100', @yesterday + INTERVAL 10 HOUR
+FROM sys_user u WHERE u.username = 'cashier02'
 ON DUPLICATE KEY UPDATE action = VALUES(action);

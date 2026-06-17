@@ -1,30 +1,29 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../store'
+import { homePath } from '../utils/portal'
 
-/**
- * 认证守卫 —— 未登录重定向到 /login
- *
- * 包裹所有需登录才能访问的路由。
- * 注意：不做角色校验；不同门户（admin/doctor/patient）通过导航配置
- * 控制可见菜单项，而非路由级拦截。
- */
+/** 未登录 → /login */
 export function RequireAuth() {
   const { isAuthenticated } = useAuth()
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  return <Outlet />
+}
+
+/** 已登录 → 对应门户首页 */
+export function GuestOnly() {
+  const { isAuthenticated, user } = useAuth()
+  if (isAuthenticated) {
+    return <Navigate to={homePath(user?.portalType)} replace />
   }
   return <Outlet />
 }
 
-/**
- * 访客守卫 —— 已登录重定向到 /home
- *
- * 包裹登录页等仅未登录用户可访问的路由。
- */
-export function GuestOnly() {
-  const { isAuthenticated } = useAuth()
-  if (isAuthenticated) {
-    return <Navigate to="/home" replace />
+/** 限制特定门户访问 */
+export function RequirePortal({ portal }) {
+  const { user } = useAuth()
+  const current = user?.portalType || 'patient'
+  if (current !== portal) {
+    return <Navigate to={homePath(current)} replace />
   }
   return <Outlet />
 }

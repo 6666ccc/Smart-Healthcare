@@ -16,6 +16,7 @@ import com.example.huiliao.mapper.PatientMapper;
 import com.example.huiliao.mapper.PrescriptionItemMapper;
 import com.example.huiliao.mapper.PrescriptionMapper;
 import com.example.huiliao.service.PrescriptionService;
+import com.example.huiliao.service.support.CurrentStaffSupport;
 import com.example.huiliao.vo.PrescriptionVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -35,6 +36,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private final OutpatientVisitMapper visitMapper;
     private final DrugMapper drugMapper;
     private final PatientMapper patientMapper;
+    private final CurrentStaffSupport currentStaffSupport;
 
     @Override
     public List<PrescriptionVO> listByVisit(Long visitId) {
@@ -66,6 +68,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         if (visit == null) {
             throw new BusinessException("就诊记录不存在");
         }
+        currentStaffSupport.assertOwnsStaff(visit.getStaffId());
         BigDecimal total = BigDecimal.ZERO;
         List<PrescriptionItem> items = new ArrayList<>();
         for (PrescriptionItemDTO itemDto : dto.getItems()) {

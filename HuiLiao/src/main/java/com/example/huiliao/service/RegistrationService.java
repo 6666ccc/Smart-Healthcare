@@ -6,7 +6,7 @@ import com.example.huiliao.vo.RegistrationVO;
 import java.util.List;
 
 public interface RegistrationService {
-    List<RegistrationVO> list(Long patientId, Integer status);
+    List<RegistrationVO> list(Long patientId, Long userId, Long registrantUserId, Long staffId, Integer status);
     Long register(RegistrationCreateDTO dto);
     void cancel(Long id);
 }

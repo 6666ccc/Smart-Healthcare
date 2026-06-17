@@ -1,128 +1,218 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../store'
-import './index.css'
-
-function IconUser() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function IconLock() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function IconLogo() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-      <path
-        d="M12 4v16M8 8c0-2.2 1.8-4 4-4s4 1.8 4 4c0 2.2-1.8 4-4 4s-4-1.8-4-4z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none" />
-    </svg>
-  )
-}
+import { homePath } from '../../utils/portal'
+import { IconLogo } from '../shared'
+import '../shared/views.css'
 
 export default function Login() {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const navigate = useNavigate()
   const { login, loading } = useAuth()
+  const navigate = useNavigate()
 
-  const handleLogin = async (e) => {
-    e.preventDefault()
+  const [form, setForm] = useState({ username: '', password: '' })
+  const [error, setError] = useState('')
+  const [showRegister, setShowRegister] = useState(false)
+  const [regForm, setRegForm] = useState({
+    username: '', password: '', confirmPassword: '', phone: '',
+  })
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value })
     setError('')
+  }
 
-    if (!username.trim() || !password) {
+  const handleRegChange = (e) => {
+    setRegForm({ ...regForm, [e.target.name]: e.target.value })
+    setError('')
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!form.username || !form.password) {
       setError('请输入用户名和密码')
       return
     }
+    const res = await login(form.username, form.password)
+    if (res.success) {
+      const saved = JSON.parse(localStorage.getItem('huiliao_user') || '{}')
+      navigate(homePath(saved.portalType), { replace: true })
+    } else {
+      setError(res.error || '登录失败')
+    }
+  }
 
+  const handleRegister = async (e) => {
+    e.preventDefault()
+    if (regForm.password !== regForm.confirmPassword) {
+      setError('两次密码输入不一致')
+      return
+    }
+    if (regForm.password.length < 6) {
+      setError('密码至少 6 位')
+      return
+    }
+    const { register } = await import('../../api/modules/user')
     try {
-      await login(username.trim(), password)
-      navigate('/home', { replace: true })
-    } catch (err) {
-      setError(err.message || '登录失败，请稍后重试')
+      const data = await register(regForm)
+      const { setToken } = await import('../../api/request')
+      setToken(data.token)
+      const u = {
+        userId: data.userId, username: data.username,
+        realName: data.realName, roleCode: data.roleCode,
+        roleName: data.roleName, portalType: data.portalType,
+        patientId: data.patientId, staffId: data.staffId,
+        roles: data.roles,
+      }
+      localStorage.setItem('huiliao_user', JSON.stringify(u))
+      navigate(homePath(u.portalType), { replace: true })
+    } catch (e) {
+      setError(e.message || '注册失败')
     }
   }
 
   return (
-    <div className="login-page">
-      <div className="login-shell">
+    <div className="login-scene view-grain">
+      {/* 左侧品牌区 — PC */}
+      <aside className="login-scene__brand">
+        <div className="login-scene__brand-glow" />
+        <div className="login-scene__brand-deco">温</div>
+        <div>
+          <p className="login-scene__brand-tagline">Warm Clinic</p>
+          <h1>温润诊所</h1>
+        </div>
+        <blockquote className="login-scene__brand-quote">
+          以温润之心，行精准之医。<br />
+          智慧诊疗，从此触手可及。
+        </blockquote>
+      </aside>
+
+      {/* 右侧表单区 */}
+      <div className="login-scene__form-panel">
         <div className="login-card">
-          <header className="login-brand">
-            <div className="login-logo" aria-hidden>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <div className="login-card__logo">
               <IconLogo />
             </div>
-            <h1 className="login-title">慧疗</h1>
-            <p className="login-subtitle">智慧医疗健康管理平台</p>
-          </header>
-
-          <div className="login-divider" aria-hidden />
-
-          <form className="login-form" onSubmit={handleLogin}>
-            {error ? (
-              <p className="login-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-
-            <div className="input-group">
-              <span className="input-icon">
-                <IconUser />
-              </span>
-              <input
-                type="text"
-                autoComplete="username"
-                placeholder="用户名（演示：admin）"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="input-group">
-              <span className="input-icon">
-                <IconLock />
-              </span>
-              <input
-                type="password"
-                autoComplete="current-password"
-                placeholder="密码（演示：password）"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-
-            <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? '登录中…' : '登 录'}
-            </button>
-          </form>
-
-          <div className="login-links">
-            <span>忘记密码</span>
-            <span onClick={() => navigate('/registration')}>注册账号</span>
+            <h1 style={{
+              fontFamily: 'var(--font-serif)',
+              fontSize: '1.5rem',
+              color: 'var(--c-brand)',
+              letterSpacing: '0.04em',
+              margin: 0,
+            }}>
+              {showRegister ? '创建账户' : '欢迎回来'}
+            </h1>
+            <p style={{ color: 'var(--c-sub)', fontSize: '0.88rem', marginTop: 8 }}>
+              {showRegister ? '加入温润诊所，开启智慧诊疗之旅' : '登录您的患者账户'}
+            </p>
           </div>
 
-          <p className="login-demo-hint">
-            演示：admin / doctor01 / patient01，密码均为 password
-          </p>
-        </div>
+          {error && (
+            <div style={{
+              background: 'var(--c-danger-bg)',
+              color: 'var(--c-danger)',
+              padding: '10px 16px',
+              borderRadius: 'var(--radius)',
+              fontSize: '0.85rem',
+              marginBottom: 20,
+              animation: 'fadeUp 300ms var(--ease-enter)',
+            }}>
+              {error}
+            </div>
+          )}
 
-        <p className="login-footer">安全登录 · 守护您的健康数据</p>
+          {!showRegister ? (
+            <form onSubmit={handleSubmit}>
+              <div className="form-group mb-md">
+                <label className="form-label">用户名</label>
+                <input
+                  className="input"
+                  name="username"
+                  placeholder="输入用户名"
+                  value={form.username}
+                  onChange={handleChange}
+                  autoComplete="username"
+                />
+              </div>
+              <div className="form-group mb-md">
+                <label className="form-label">密码</label>
+                <input
+                  className="input"
+                  type="password"
+                  name="password"
+                  placeholder="输入密码"
+                  value={form.password}
+                  onChange={handleChange}
+                  autoComplete="current-password"
+                />
+              </div>
+              <button
+                className="btn btn--primary btn--lg"
+                type="submit"
+                disabled={loading}
+                style={{ width: '100%', marginTop: 8 }}
+              >
+                {loading ? '登录中…' : '登录'}
+              </button>
+
+              <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.85rem', color: 'var(--c-sub)' }}>
+                还没有账户？{' '}
+                <button
+                  type="button"
+                  onClick={() => { setShowRegister(true); setError('') }}
+                  style={{
+                    background: 'none', border: 'none', color: 'var(--c-accent)',
+                    cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem',
+                  }}
+                >
+                  立即注册
+                </button>
+              </p>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister}>
+              <div className="form-group mb-md">
+                <label className="form-label">用户名</label>
+                <input className="input" name="username" placeholder="设置登录用户名"
+                  value={regForm.username} onChange={handleRegChange} />
+              </div>
+              <div className="form-group mb-md">
+                <label className="form-label">密码（至少 6 位）</label>
+                <input className="input" type="password" name="password" placeholder="设置密码"
+                  value={regForm.password} onChange={handleRegChange} />
+              </div>
+              <div className="form-group mb-md">
+                <label className="form-label">确认密码</label>
+                <input className="input" type="password" name="confirmPassword" placeholder="再次输入密码"
+                  value={regForm.confirmPassword} onChange={handleRegChange} />
+              </div>
+              <div className="form-group mb-md">
+                <label className="form-label">手机号</label>
+                <input className="input" name="phone" placeholder="输入手机号"
+                  value={regForm.phone} onChange={handleRegChange} />
+              </div>
+              <button className="btn btn--primary btn--lg" type="submit"
+                style={{ width: '100%', marginTop: 8 }}>
+                注册并登录
+              </button>
+
+              <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.85rem', color: 'var(--c-sub)' }}>
+                已有账户？{' '}
+                <button type="button"
+                  onClick={() => { setShowRegister(false); setError('') }}
+                  style={{ background: 'none', border: 'none', color: 'var(--c-accent)',
+                    cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}>
+                  返回登录
+                </button>
+              </p>
+            </form>
+          )}
+
+          <div className="login-demo">
+            <p className="login-demo__title">演示账号（密码均为 password）</p>
+            <p>患者端：patient01 · 医生端：doctor01 · 管理端：admin</p>
+          </div>
+        </div>
       </div>
     </div>
   )

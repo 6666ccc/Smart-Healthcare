@@ -28,7 +28,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/health",
-                        "/api/auth/login"
+                        "/api/auth/login",
+                        "/api/auth/register"
                 );
     }
 }

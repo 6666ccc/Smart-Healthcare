@@ -2,7 +2,7 @@
 
 > 项目名称：HuiLiao（惠疗）—— 智能门诊管理系统
 > 基址：`http://localhost:8080`
-> 除 **健康检查**、**登录** 外，请求头需带：`Authorization: Bearer <token>` 或 `X-Token: <token>`
+> 除 **健康检查**、**登录**、**注册** 外，请求头需带：`Authorization: Bearer <token>` 或 `X-Token: <token>`
 
 ---
 
@@ -30,6 +30,7 @@
    - [发药管理](#发药-apiwaibudispense)
    - [仪表盘](#仪表盘-apiwaibudashboard)
    - [AI 对话](#ai-对话-apiwaibuai)
+   - [用户管理](#用户管理-apiuser)
 6. [配置信息](#配置信息)
 7. [门诊闭环流程（答辩演示顺序）](#门诊闭环流程答辩演示顺序)
 8. [演示账号](#演示账号)
@@ -439,6 +440,7 @@
 | 方法 | 路径 | 鉴权 | 说明 |
 |------|------|------|------|
 | POST | `/api/auth/login` | 否 | 用户登录 |
+| POST | `/api/auth/register` | 否 | 患者自助注册（注册即登录，真实姓名在个人中心补充） |
 | POST | `/api/auth/logout` | 是 | 退出登录（使 Token 失效） |
 
 #### POST `/api/auth/login`
@@ -496,6 +498,39 @@
 2. `accountType = staff` → portalType = doctor
 3. 角色的 `defaultPortal` 字段
 4. 角色编码回退映射（doctor→doctor, patient→patient, admin/cashier/pharmacist→admin）
+
+#### POST `/api/auth/register`
+
+**请求体**：
+
+```json
+{
+  "username": "zhangsan",
+  "password": "123456",
+  "confirmPassword": "123456",
+  "phone": "13800138000"
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| username | string | 是 | 登录名（全局唯一） |
+| password | string | 是 | 密码（至少 6 位，BCrypt 加密存储） |
+| confirmPassword | string | 是 | 确认密码（需与 password 一致） |
+| phone | string | 是 | 手机号（全局唯一） |
+
+> **注意**：真实姓名 (`realName`) 已从注册流程中移除，注册成功后可在个人中心「编辑资料」中补充。
+
+**业务逻辑**：
+1. 校验两次密码一致
+2. 校验用户名唯一
+3. 校验手机号唯一
+4. 创建 `sys_user`（`accountType=patient`，`realName` 为空）
+5. 分配 `patient` 角色
+6. 自动创建患者档案（姓名暂用 `username` 占位）
+7. 生成 Token，注册即登录
+
+**响应 `data`**：`LoginVO`（同登录响应，其中 `realName` 可能为 null）
 
 ---
 
@@ -1445,6 +1480,48 @@ ai:
 
 ---
 
+### 用户管理 `/api/user`
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|------|------|------|------|
+| PUT | `/api/user/profile` | 是 | 更新个人资料（真实姓名、手机号等） |
+
+#### PUT `/api/user/profile`
+
+**请求体**（所有字段均为可选，仅修改传入的字段）：
+
+```json
+{
+  "realName": "张三",
+  "phone": "13800138000",
+  "gender": 1,
+  "birthDate": "1990-05-20",
+  "idCard": "110101199005201234",
+  "address": "北京市朝阳区",
+  "allergyHistory": "青霉素过敏"
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| realName | string | 否 | 真实姓名（注册后首次补充的主要字段） |
+| phone | string | 否 | 联系电话（需全局唯一，排除自身） |
+| gender | number | 否 | 性别（0 女 / 1 男 / 2 未知） |
+| birthDate | string (date) | 否 | 出生日期（ISO 格式，如 `1990-05-20`） |
+| idCard | string | 否 | 身份证号 |
+| address | string | 否 | 住址 |
+| allergyHistory | string | 否 | 过敏史 |
+
+**业务逻辑**：
+- 通过 Token 解析当前登录用户 ID
+- 更新 `sys_user` 表的 `realName`、`phone` 等字段
+- 若当前用户为患者（`accountType=patient`），同步更新 `patient` 档案表的对应字段
+- 更新手机号时校验全局唯一性（排除自身）
+
+**响应**：无 data
+
+---
+
 ## 配置信息
 
 ### 服务器配置
@@ -1491,6 +1568,7 @@ registry.addMapping("/api/**")
 |----------|------|
 | `/api/health` | 健康检查（无需登录） |
 | `/api/auth/login` | 登录接口（无需登录） |
+| `/api/auth/register` | 注册接口（无需登录） |
 
 ---
 
@@ -1643,6 +1721,6 @@ registry.addMapping("/api/**")
 
 ---
 
-> 文档版本：v2.0  
-> 最后更新：2026-06-09  
+> 文档版本：v2.1  
+> 最后更新：2026-06-16  
 > 项目地址：`D:\刘畅\WebAI\HuiLiao`

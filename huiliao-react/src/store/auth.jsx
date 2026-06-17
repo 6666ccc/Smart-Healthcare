@@ -1,11 +1,11 @@
-import { useCallback, useMemo, useState } from 'react'
-import { login as loginApi, logout as logoutApi } from '../api/modules/user'
-import { clearToken, getToken, setToken } from '../api/request'
+import { useState, useCallback, useMemo } from 'react'
 import { AuthContext } from './authContext'
+import { login as loginApi, logout as logoutApi } from '../api/modules/user'
+import { setToken } from '../api/request'
 
 const USER_KEY = 'huiliao_user'
 
-function readStoredUser() {
+function loadUser() {
   try {
     const raw = localStorage.getItem(USER_KEY)
     return raw ? JSON.parse(raw) : null
@@ -14,55 +14,69 @@ function readStoredUser() {
   }
 }
 
-/**
- * 全局登录态：供任意页面通过 useAuth() 读取用户信息与登录/退出方法
- */
+function saveUser(user) {
+  if (user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user))
+  } else {
+    localStorage.removeItem(USER_KEY)
+  }
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(readStoredUser)
-  const [token, setTokenState] = useState(getToken)
+  const [user, setUser] = useState(loadUser)
   const [loading, setLoading] = useState(false)
 
-  const isAuthenticated = Boolean(token)
+  const token = localStorage.getItem('huiliao_token')
+  const isAuthenticated = !!token
 
   const login = useCallback(async (username, password) => {
     setLoading(true)
     try {
       const data = await loginApi({ username, password })
-      const nextToken = data?.token
-      if (!nextToken) {
-        throw new Error('登录响应缺少 token')
+      setToken(data.token)
+      const u = {
+        userId: data.userId,
+        username: data.username,
+        realName: data.realName,
+        roleCode: data.roleCode,
+        roleName: data.roleName,
+        portalType: data.portalType,
+        patientId: data.patientId,
+        staffId: data.staffId,
+        roles: data.roles,
       }
-      setToken(nextToken)
-      setTokenState(nextToken)
-      setUser(data)
-      localStorage.setItem(USER_KEY, JSON.stringify(data))
-      return data
+      saveUser(u)
+      setUser(u)
+      return { success: true }
+    } catch (e) {
+      return { success: false, error: e.message }
     } finally {
       setLoading(false)
     }
   }, [])
 
   const logout = useCallback(async () => {
-    setLoading(true)
-    try {
-      if (getToken()) {
-        await logoutApi()
-      }
-    } catch {
-      // 网络失败也清理本地态，避免卡死在已登录状态
-    } finally {
-      clearToken()
-      localStorage.removeItem(USER_KEY)
-      setTokenState(null)
-      setUser(null)
-      setLoading(false)
-    }
+    try { await logoutApi() } catch { /* 即使后端调用失败也清理本地态 */ }
+    setToken(null)
+    saveUser(null)
+    setUser(null)
   }, [])
 
-  const value = useMemo(
-    () => ({ user, token, isAuthenticated, loading, login, logout }),
-    [user, token, isAuthenticated, loading, login, logout],
-  )
+  const updateUser = useCallback((partial) => {
+    const next = { ...user, ...partial }
+    saveUser(next)
+    setUser(next)
+  }, [user])
+
+  const value = useMemo(() => ({
+    user,
+    token,
+    loading,
+    isAuthenticated,
+    login,
+    logout,
+    updateUser,
+  }), [user, token, loading, isAuthenticated, login, logout, updateUser])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

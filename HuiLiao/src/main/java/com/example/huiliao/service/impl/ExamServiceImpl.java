@@ -11,6 +11,7 @@ import com.example.huiliao.mapper.ExamRequestMapper;
 import com.example.huiliao.mapper.MedicalItemMapper;
 import com.example.huiliao.mapper.OutpatientVisitMapper;
 import com.example.huiliao.service.ExamService;
+import com.example.huiliao.service.support.CurrentStaffSupport;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,7 @@ public class ExamServiceImpl implements ExamService {
     private final ExamRequestMapper examRequestMapper;
     private final OutpatientVisitMapper visitMapper;
     private final MedicalItemMapper medicalItemMapper;
+    private final CurrentStaffSupport currentStaffSupport;
 
     @Override
     public List<ExamRequest> listByVisit(Long visitId) {
@@ -35,6 +37,7 @@ public class ExamServiceImpl implements ExamService {
         if (visit == null) {
             throw new BusinessException("就诊记录不存在");
         }
+        currentStaffSupport.assertOwnsStaff(visit.getStaffId());
         MedicalItem item = medicalItemMapper.selectById(dto.getItemId());
         if (item == null || item.getStatus() != BizStatus.ENABLED) {
             throw new BusinessException("诊疗项目不可用");

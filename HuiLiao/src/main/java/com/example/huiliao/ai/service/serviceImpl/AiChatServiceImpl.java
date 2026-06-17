@@ -1,6 +1,7 @@
 package com.example.huiliao.ai.service.serviceImpl;
 
 import com.example.huiliao.ai.client.AiServiceClient;
+import com.example.huiliao.ai.client.ChatStreamConsumer;
 import com.example.huiliao.ai.dto.ChatRequestDTO;
 import com.example.huiliao.ai.service.AiChatService;
 import com.example.huiliao.ai.vo.ChatResponseVO;
@@ -16,5 +17,10 @@ public class AiChatServiceImpl implements AiChatService {
     @Override
     public ChatResponseVO chat(ChatRequestDTO dto) {
         return aiServiceClient.chat(dto);
+    }
+
+    @Override
+    public void streamChat(ChatRequestDTO dto, ChatStreamConsumer consumer) {
+        aiServiceClient.streamChat(dto, consumer);
     }
 }

@@ -11,6 +11,9 @@ import java.util.List;
 public interface RegistrationMapper {
 
     List<RegistrationVO> selectList(@Param("patientId") Long patientId,
+                                  @Param("userId") Long userId,
+                                  @Param("registrantUserId") Long registrantUserId,
+                                  @Param("staffId") Long staffId,
                                   @Param("status") Integer status);
 
     Registration selectById(@Param("id") Long id);

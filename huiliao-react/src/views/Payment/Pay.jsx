@@ -1,114 +1,167 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getCharge, payCharge } from '../../api/modules/payment'
-import { PAY_STATUS_MAP, PAY_TYPE_MAP, formatMoney, formatDateTime } from '../../utils'
+import { Loading, StatusBadge } from '../../components'
+import { getCharge, payCharge } from '../../api'
+import { PAY_STATUS_MAP, PAY_TYPE_MAP, formatDateTime, formatMoney } from '../../utils'
+import { useIsPc } from '../../hooks'
+import PcLayout from '../Home/pc/PcLayout'
+import MobileTabbar from '../Home/mobile/MobileTabbar'
+import { PageBack } from '../shared'
+import '../shared/views.css'
 
 export default function PaymentPay() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const isPc = useIsPc()
+
   const [charge, setCharge] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [payForm, setPayForm] = useState({ payType: 1, paidAmount: '' })
-  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [paying, setPaying] = useState(false)
+  const [payType, setPayType] = useState(2) // 默认微信
+  const [msg, setMsg] = useState('')
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await getCharge(id)
-      setCharge(data)
-      const amt = data?.totalAmount ?? data?.amount ?? 0
-      setPayForm({ payType: 1, paidAmount: String(amt) })
-    } catch { setCharge(null) }
-    finally { setLoading(false) }
+  useEffect(() => {
+    (async () => {
+      setLoading(true)
+      try {
+        const data = await getCharge(Number(id))
+        setCharge(data)
+      } catch (e) { setError(e.message || '加载失败') }
+      finally { setLoading(false) }
+    })()
   }, [id])
 
-  useEffect(() => { load() }, [load])
-
   const handlePay = async () => {
-    setError('')
-    const amount = Number(payForm.paidAmount)
-    if (!amount || amount <= 0) { setError('请输入有效金额'); return }
-    setSubmitting(true)
+    setPaying(true); setMsg('')
     try {
-      await payCharge(id, { payType: payForm.payType, paidAmount: amount })
-      load()
-    } catch (err) {
-      setError(err.message || '支付失败')
-    } finally { setSubmitting(false) }
+      await payCharge(Number(id), { payType, paidAmount: charge.totalAmount })
+      setMsg('支付成功！')
+      // 刷新数据
+      const data = await getCharge(Number(id))
+      setCharge(data)
+    } catch (e) {
+      setMsg(e.message || '支付失败')
+    } finally {
+      setPaying(false)
+    }
   }
 
-  if (loading) return <p className="shared-empty">加载中…</p>
-  if (!charge) return <p className="shared-empty">收费单不存在</p>
+  const content = (
+    <div className="page">
+      <PageBack onClick={() => navigate('/payment')} label="返回缴费列表" />
 
-  const statusInfo = PAY_STATUS_MAP[charge.payStatus ?? charge.status] ?? { label: '未知', cls: '' }
-  const isPaid = (charge.payStatus ?? charge.status) === 1
-  const totalAmount = charge.totalAmount ?? charge.amount ?? 0
-
-  return (
-    <div className="pay-detail">
-      <button type="button" className="pay-detail-back" onClick={() => navigate(-1)}>← 返回</button>
-      <h1>收费详情</h1>
-
-      <div className="pay-detail-card">
-        <div className="pay-detail-row">
-          <span className="pay-detail-label">收费单号</span>
-          <span>#{charge.id}</span>
-        </div>
-        <div className="pay-detail-row">
-          <span className="pay-detail-label">患者</span>
-          <span>{charge.patientName || `患者 #${charge.patientId}`}</span>
-        </div>
-        <div className="pay-detail-row">
-          <span className="pay-detail-label">就诊编号</span>
-          <span>{charge.visitId ? `#${charge.visitId}` : '—'}</span>
-        </div>
-        <div className="pay-detail-row">
-          <span className="pay-detail-label">收费项目</span>
-          <span>{charge.items || charge.itemNames || '—'}</span>
-        </div>
-        <div className="pay-detail-row">
-          <span className="pay-detail-label">应收金额</span>
-          <span className="pay-detail-amount">{formatMoney(totalAmount)}</span>
-        </div>
-        <div className="pay-detail-row">
-          <span className="pay-detail-label">状态</span>
-          <span className={`shared-status shared-status--${statusInfo.cls}`}>{statusInfo.label}</span>
-        </div>
-        <div className="pay-detail-row">
-          <span className="pay-detail-label">创建时间</span>
-          <span>{formatDateTime(charge.createTime)}</span>
-        </div>
-        {charge.payTime && (
-          <div className="pay-detail-row">
-            <span className="pay-detail-label">支付时间</span>
-            <span>{formatDateTime(charge.payTime)}</span>
+      {error && <div className="card" style={{ color: 'var(--c-danger)', textAlign: 'center' }}>{error}</div>}
+      {loading ? <Loading /> : !charge ? <div className="card" style={{ textAlign: 'center', color: 'var(--c-sub)' }}>收费单不存在</div> : (
+        <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 640 }}>
+          {/* 收费信息 */}
+          <div className="card">
+            <div className="flex-between mb-md">
+              <h2 style={{ margin: 0 }}>收费详情</h2>
+              <StatusBadge status={charge.payStatus} map={PAY_STATUS_MAP} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px' }}>
+              <div>
+                <div className="text-muted text-sm">订单编号</div>
+                <div style={{ fontWeight: 500 }}>{charge.orderNo}</div>
+              </div>
+              <div>
+                <div className="text-muted text-sm">患者</div>
+                <div style={{ fontWeight: 500 }}>{charge.patientName}</div>
+              </div>
+              <div>
+                <div className="text-muted text-sm">创建时间</div>
+                <div style={{ fontWeight: 500 }}>{formatDateTime(charge.createTime)}</div>
+              </div>
+              <div>
+                <div className="text-muted text-sm">支付时间</div>
+                <div style={{ fontWeight: 500 }}>{charge.payTime ? formatDateTime(charge.payTime) : '—'}</div>
+              </div>
+              <div>
+                <div className="text-muted text-sm">总金额</div>
+                <div style={{ fontWeight: 600, fontSize: '1.3rem', color: 'var(--c-accent)' }}>
+                  {formatMoney(charge.totalAmount)}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted text-sm">支付方式</div>
+                <div style={{ fontWeight: 500 }}>{PAY_TYPE_MAP[charge.payType] || '—'}</div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
 
-      {!isPaid && (
-        <div className="pay-detail-form">
-          <h2>确认支付</h2>
-          {error && <p className="shared-error">{error}</p>}
-          <label className="pay-detail-field">
-            <span>支付方式</span>
-            <select value={payForm.payType} onChange={(e) => setPayForm((f) => ({ ...f, payType: Number(e.target.value) }))}>
-              {Object.entries(PAY_TYPE_MAP).map(([k, v]) => (
-                <option key={k} value={Number(k)}>{v}</option>
-              ))}
-            </select>
-          </label>
-          <label className="pay-detail-field">
-            <span>实收金额</span>
-            <input type="number" step="0.01" min="0" value={payForm.paidAmount}
-              onChange={(e) => setPayForm((f) => ({ ...f, paidAmount: e.target.value }))} />
-          </label>
-          <button type="button" className="shared-btn-submit" disabled={submitting} onClick={handlePay}>
-            {submitting ? '处理中…' : `确认支付 ${formatMoney(Number(payForm.paidAmount) || 0)}`}
-          </button>
+          {/* 明细 */}
+          <div className="card">
+            <h3 style={{ margin: '0 0 12px 0' }}>费用明细</h3>
+            {charge.details?.length > 0 ? (
+              <div className="view-table-wrap">
+                <table className="view-table">
+                  <thead>
+                    <tr><th>项目</th><th>金额</th></tr>
+                  </thead>
+                  <tbody>
+                    {charge.details.map((d) => (
+                      <tr key={d.id}>
+                        <td>{d.itemName}</td>
+                        <td>{formatMoney(d.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-muted text-sm" style={{ textAlign: 'center', padding: 16 }}>暂无明细</p>
+            )}
+            <div className="flex-between mt-md" style={{ padding: '12px 0', borderTop: '2px solid var(--c-border)' }}>
+              <div style={{ fontWeight: 600 }}>合计</div>
+              <div style={{ fontWeight: 600, fontSize: '1.2rem', color: 'var(--c-accent)' }}>
+                {formatMoney(charge.totalAmount)}
+              </div>
+            </div>
+          </div>
+
+          {/* 支付表单 (仅待支付时显示) */}
+          {charge.payStatus === 0 && (
+            <div className="card card--accent-top">
+              <h3 style={{ margin: '0 0 16px 0' }}>选择支付方式</h3>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+                {Object.entries(PAY_TYPE_MAP).map(([k, v]) => (
+                  <button key={k}
+                    type="button"
+                    className={`view-pay-method${Number(k) === payType ? ' view-pay-method--active' : ''}`}
+                    onClick={() => setPayType(Number(k))}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+              {msg && (
+                <div style={{
+                  padding: '8px 14px', borderRadius: 'var(--radius)',
+                  background: msg.includes('成功') ? 'var(--c-success-bg)' : 'var(--c-danger-bg)',
+                  color: msg.includes('成功') ? 'var(--c-success)' : 'var(--c-danger)',
+                  marginBottom: 16, fontSize: '0.9rem',
+                }}>
+                  {msg}
+                </div>
+              )}
+              <button
+                className="btn btn--accent btn--lg"
+                onClick={handlePay}
+                disabled={paying || msg.includes('成功')}
+                style={{ width: '100%' }}
+              >
+                {paying ? '支付中…' : `确认支付 ${formatMoney(charge.totalAmount)}`}
+              </button>
+            </div>
+          )}
         </div>
       )}
+
+      {!isPc && <MobileTabbar />}
     </div>
   )
+
+  if (isPc) return <PcLayout>{content}</PcLayout>
+  return content
 }

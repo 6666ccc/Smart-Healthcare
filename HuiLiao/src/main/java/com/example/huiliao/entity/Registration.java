@@ -17,6 +17,7 @@ public class Registration {
     private BigDecimal regFee;
     private Integer status;
     private Long cashierId;
+    private Long registrantUserId;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

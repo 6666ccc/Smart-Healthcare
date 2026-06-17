@@ -3,6 +3,7 @@ package com.example.huiliao.controller;
 import com.example.huiliao.common.Result;
 import com.example.huiliao.dto.VisitUpdateDTO;
 import com.example.huiliao.service.VisitService;
+import com.example.huiliao.service.support.CurrentStaffSupport;
 import com.example.huiliao.vo.VisitVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -15,11 +16,13 @@ import java.util.List;
 public class VisitController {
 
     private final VisitService visitService;
+    private final CurrentStaffSupport currentStaffSupport;
 
     @GetMapping
     public Result<List<VisitVO>> list(@RequestParam(required = false) Integer status,
                                       @RequestParam(required = false) Long staffId) {
-        return Result.success(visitService.list(status, staffId));
+        Long effectiveStaffId = currentStaffSupport.resolveStaffId(staffId);
+        return Result.success(visitService.list(status, effectiveStaffId));
     }
 
     @GetMapping("/{id}")

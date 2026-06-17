@@ -6,7 +6,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @Slf4j
-@RestControllerAdvice(assignableTypes = com.example.huiliao.ai.controller.AiChatController.class)
+@RestControllerAdvice(assignableTypes = {
+        com.example.huiliao.ai.controller.AiChatController.class,
+})
 public class AiExceptionHandler {
 
     @ExceptionHandler(AiServiceException.class)

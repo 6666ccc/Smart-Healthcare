@@ -4,8 +4,6 @@ export const AuthContext = createContext(null)
 
 export function useAuth() {
   const ctx = useContext(AuthContext)
-  if (!ctx) {
-    throw new Error('useAuth 必须在 AuthProvider 内使用')
-  }
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
 }

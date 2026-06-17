@@ -18,14 +18,20 @@ public class AiServiceProperties {
     /** 聊天接口路径，对应 FastAPI POST /v1/chat */
     private String chatPath = "/v1/chat";
 
+    /** 流式聊天路径，对应 FastAPI POST /v1/chat/stream */
+    private String chatStreamPath = "/v1/chat/stream";
+
     /** 健康检查路径，对应 FastAPI GET /health */
     private String healthPath = "/health";
 
     /** 连接超时时间 */
     private Duration connectTimeout = Duration.ofSeconds(5);
 
-    /** 读取超时时间 **/
+    /** 同步聊天读取超时（流式接口按块读取，不受此限制） */
     private Duration readTimeout = Duration.ofSeconds(120);
+
+    /** 流式聊天读取超时（单次 read 间隔） */
+    private Duration streamReadTimeout = Duration.ofMinutes(10);
 
     /** 内部 API Key，AI 回调 Java 接口时使用 */
     private String apiKey = "change-me-in-production";
