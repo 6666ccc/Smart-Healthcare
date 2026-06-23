@@ -1,9 +1,12 @@
 package com.example.huiliao.config;
 
-import com.example.huiliao.ai.config.AiServiceProperties;
 import com.example.huiliao.common.ResultCode;
+import com.example.huiliao.common.context.ClientContext;
 import com.example.huiliao.common.context.UserContext;
 import com.example.huiliao.common.exception.BusinessException;
+import com.example.huiliao.oauth.dto.UserTokenContext;
+import com.example.huiliao.oauth.service.JwtTokenProvider;
+import com.example.huiliao.oauth.support.JwtClaims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +18,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @RequiredArgsConstructor
 public class AuthInterceptor implements HandlerInterceptor {
 
-    private final AuthTokenStore authTokenStore;
-    private final AiServiceProperties aiServiceProperties;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -24,24 +26,16 @@ public class AuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        String apiKey = request.getHeader("X-Api-Key");
-        if (StringUtils.hasText(apiKey) && apiKey.equals(aiServiceProperties.getApiKey())) {
-            String userIdHeader = request.getHeader("X-User-Id");
-            if (StringUtils.hasText(userIdHeader)) {
-                UserContext.setUserId(Long.parseLong(userIdHeader));
-            }
-            return true;
-        }
-
         String token = resolveToken(request);
         if (!StringUtils.hasText(token)) {
             throw new BusinessException(ResultCode.UNAUTHORIZED, "未登录或 Token 无效");
         }
-        Long userId = authTokenStore.getUserId(token);
-        if (userId == null) {
-            throw new BusinessException(ResultCode.UNAUTHORIZED, "登录已过期，请重新登录");
+        UserTokenContext ctx = jwtTokenProvider.parseAndValidate(token);
+        if (JwtClaims.TOKEN_TYPE_CLIENT.equals(ctx.getTokenType())) {
+            ClientContext.set(ctx.getClientId(), ctx.getScope());
+        } else {
+            UserContext.setUserId(ctx.getUserId());
         }
-        UserContext.setUserId(userId);
         return true;
     }
 
@@ -49,6 +43,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
                                 Object handler, Exception ex) {
         UserContext.clear();
+        ClientContext.clear();
     }
 
     private String resolveToken(HttpServletRequest request) {

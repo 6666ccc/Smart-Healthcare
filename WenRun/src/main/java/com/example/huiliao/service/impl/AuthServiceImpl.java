@@ -3,7 +3,6 @@ package com.example.huiliao.service.impl;
 import com.example.huiliao.common.constant.AccountType;
 import com.example.huiliao.common.constant.BizStatus;
 import com.example.huiliao.common.exception.BusinessException;
-import com.example.huiliao.config.AuthTokenStore;
 import com.example.huiliao.dto.LoginDTO;
 import com.example.huiliao.dto.RegisterDTO;
 import com.example.huiliao.dto.UpdateProfileDTO;
@@ -14,14 +13,21 @@ import com.example.huiliao.entity.SysUser;
 import com.example.huiliao.mapper.PatientMapper;
 import com.example.huiliao.mapper.StaffMapper;
 import com.example.huiliao.mapper.SysUserMapper;
+import com.example.huiliao.oauth.config.OAuthProperties;
+import com.example.huiliao.oauth.dto.TokenPair;
+import com.example.huiliao.oauth.service.JwtTokenProvider;
+import com.example.huiliao.oauth.service.TokenService;
 import com.example.huiliao.service.AuthService;
 import com.example.huiliao.service.PatientService;
 import com.example.huiliao.service.support.LoginAssembler;
 import com.example.huiliao.vo.LoginVO;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 
@@ -36,66 +42,33 @@ public class AuthServiceImpl implements AuthService {
     private final StaffMapper staffMapper;
     private final PatientMapper patientMapper;
     private final PatientService patientService;
-    private final AuthTokenStore authTokenStore;
+    private final TokenService tokenService;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final OAuthProperties oauthProperties;
     private final PasswordEncoder passwordEncoder;
 
     /** 校验账号密码，签发 Token 并组装登录响应（含角色与业务 ID） */
     @Override
     public LoginVO login(LoginDTO dto) {
+        TokenPair pair = tokenService.issueByPassword(
+                dto.getUsername(),
+                dto.getPassword(),
+                oauthProperties.getDefaultClientId(),
+                currentUserAgent(),
+                currentClientIp()
+        );
         SysUser user = sysUserMapper.selectByUsername(dto.getUsername());
-        if (user == null || user.getStatus() != BizStatus.ENABLED) {
-            throw new BusinessException("用户名或密码错误");
-        }
-        if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            throw new BusinessException("用户名或密码错误");
-        }
-        String token = authTokenStore.createToken(user.getId());
-        List<SysRole> roleList = sysUserMapper.selectRolesByUserId(user.getId());
-        SysRole primaryRole = LoginAssembler.pickPrimaryRole(roleList);
-        String portalType = LoginAssembler.resolvePortalType(user, primaryRole);
-
-        LoginVO vo = new LoginVO();
-        vo.setToken(token);
-        vo.setUserId(user.getId());
-        vo.setUsername(user.getUsername());
-        vo.setRealName(user.getRealName());
-        vo.setPortalType(portalType);
-        vo.setUserType(portalType);
-        vo.setRoles(roleList.stream().map(SysRole::getRoleCode).toList());
-        if (primaryRole != null) {
-            vo.setRoleCode(primaryRole.getRoleCode());
-            vo.setRoleName(primaryRole.getRoleName());
-        }
-        fillBusinessIds(user, vo);
-        return vo;
-    }
-
-    /** 根据账号类型填充 staffId 或 patientId */
-    private void fillBusinessIds(SysUser user, LoginVO vo) {
-        String accountType = user.getAccountType();
-        if (!StringUtils.hasText(accountType)) {
-            accountType = AccountType.INTERNAL;
-        }
-        if (AccountType.STAFF.equals(accountType)) {
-            Staff staff = staffMapper.selectByUserId(user.getId());
-            if (staff != null) {
-                vo.setStaffId(staff.getId());
-            }
-            return;
-        }
-        if (AccountType.PATIENT.equals(accountType)) {
-            Patient patient = patientMapper.selectByUserId(user.getId());
-            if (patient != null) {
-                vo.setPatientId(patient.getId());
-            }
-        }
+        return buildLoginVO(user, pair);
     }
 
     /** 移除 Token，实现登出 */
     @Override
-    public void logout(String token) {
-        if (StringUtils.hasText(token)) {
-            authTokenStore.remove(token);
+    public void logout(String accessToken, String refreshToken) {
+        if (StringUtils.hasText(accessToken)) {
+            tokenService.revokeAccessToken(accessToken);
+        }
+        if (StringUtils.hasText(refreshToken)) {
+            tokenService.revokeRefreshToken(refreshToken);
         }
     }
 
@@ -105,11 +78,7 @@ public class AuthServiceImpl implements AuthService {
         if (!StringUtils.hasText(token)) {
             throw new BusinessException("未登录");
         }
-        Long userId = authTokenStore.getUserId(token);
-        if (userId == null) {
-            throw new BusinessException("Token 已过期或无效");
-        }
-        return userId;
+        return jwtTokenProvider.parseUserId(token);
     }
 
     /** 更新 sys_user 基础信息；患者账号同步更新 patient 档案 */
@@ -224,13 +193,25 @@ public class AuthServiceImpl implements AuthService {
         patientService.create(patient);
 
         // 8. 生成 Token 并返回登录信息（注册即登录）
-        String token = authTokenStore.createToken(user.getId());
+        TokenPair pair = tokenService.issueForUser(
+                user,
+                oauthProperties.getDefaultClientId(),
+                currentUserAgent(),
+                currentClientIp()
+        );
+        return buildLoginVO(user, pair);
+    }
+
+    private LoginVO buildLoginVO(SysUser user, TokenPair pair) {
         List<SysRole> roleList = sysUserMapper.selectRolesByUserId(user.getId());
         SysRole primaryRole = LoginAssembler.pickPrimaryRole(roleList);
         String portalType = LoginAssembler.resolvePortalType(user, primaryRole);
 
         LoginVO vo = new LoginVO();
-        vo.setToken(token);
+        vo.setAccessToken(pair.getAccessToken());
+        vo.setToken(pair.getAccessToken());
+        vo.setRefreshToken(pair.getRefreshToken());
+        vo.setExpiresIn(pair.getExpiresIn());
         vo.setUserId(user.getId());
         vo.setUsername(user.getUsername());
         vo.setRealName(user.getRealName());
@@ -243,5 +224,43 @@ public class AuthServiceImpl implements AuthService {
         }
         fillBusinessIds(user, vo);
         return vo;
+    }
+
+    /** 根据账号类型填充 staffId 或 patientId */
+    private void fillBusinessIds(SysUser user, LoginVO vo) {
+        String accountType = user.getAccountType();
+        if (!StringUtils.hasText(accountType)) {
+            accountType = AccountType.INTERNAL;
+        }
+        if (AccountType.STAFF.equals(accountType)) {
+            Staff staff = staffMapper.selectByUserId(user.getId());
+            if (staff != null) {
+                vo.setStaffId(staff.getId());
+            }
+            return;
+        }
+        if (AccountType.PATIENT.equals(accountType)) {
+            Patient patient = patientMapper.selectByUserId(user.getId());
+            if (patient != null) {
+                vo.setPatientId(patient.getId());
+            }
+        }
+    }
+
+    private String currentUserAgent() {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs == null) {
+            return null;
+        }
+        HttpServletRequest request = attrs.getRequest();
+        return request.getHeader("User-Agent");
+    }
+
+    private String currentClientIp() {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs == null) {
+            return null;
+        }
+        return attrs.getRequest().getRemoteAddr();
     }
 }

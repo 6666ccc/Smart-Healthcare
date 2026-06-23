@@ -54,8 +54,12 @@ export default function Login() {
     const { register } = await import('../../api/modules/user')
     try {
       const data = await register(regForm)
-      const { setToken } = await import('../../api/request')
-      setToken(data.token)
+      const { setTokenBundle } = await import('../../api/request')
+      setTokenBundle({
+        accessToken: data.accessToken || data.token,
+        refreshToken: data.refreshToken,
+        expiresIn: data.expiresIn,
+      })
       const u = {
         userId: data.userId, username: data.username,
         realName: data.realName, roleCode: data.roleCode,

@@ -32,7 +32,4 @@ public class AiServiceProperties {
 
     /** 流式聊天读取超时（单次 read 间隔） */
     private Duration streamReadTimeout = Duration.ofMinutes(10);
-
-    /** 内部 API Key，AI 回调 Java 接口时使用 */
-    private String apiKey = "change-me-in-production";
 }

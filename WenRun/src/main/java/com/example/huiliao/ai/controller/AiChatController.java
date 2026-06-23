@@ -6,18 +6,14 @@ import com.example.huiliao.ai.exception.AiServiceException;
 import com.example.huiliao.ai.service.AiChatService;
 import com.example.huiliao.ai.vo.ChatResponseVO;
 import com.example.huiliao.common.Result;
-import com.example.huiliao.common.constant.AccountType;
-import com.example.huiliao.config.AuthTokenStore;
+import com.example.huiliao.oauth.dto.UserTokenContext;
+import com.example.huiliao.oauth.service.JwtTokenProvider;
 import com.example.huiliao.entity.ChatMessage;
 import com.example.huiliao.entity.Patient;
-import com.example.huiliao.entity.Staff;
-import com.example.huiliao.entity.SysRole;
 import com.example.huiliao.entity.SysUser;
 import com.example.huiliao.mapper.ChatMessageMapper;
 import com.example.huiliao.mapper.PatientMapper;
-import com.example.huiliao.mapper.StaffMapper;
 import com.example.huiliao.mapper.SysUserMapper;
-import com.example.huiliao.service.support.LoginAssembler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -41,18 +36,15 @@ import java.util.concurrent.CompletableFuture;
 public class AiChatController {
 
     private final AiChatService aiChatService;
-    private final AuthTokenStore authTokenStore;
+    private final JwtTokenProvider jwtTokenProvider;
     private final SysUserMapper sysUserMapper;
-    private final StaffMapper staffMapper;
     private final PatientMapper patientMapper;
     private final ChatMessageMapper chatMessageMapper;
     private final AiServiceProperties aiServiceProperties;
 
     @PostMapping("/chat")
     public Result<ChatResponseVO> chat(@Valid @RequestBody ChatRequestDTO dto, HttpServletRequest request) {
-        String token = resolveToken(request);
-        enrichContext(dto, token);
-        dto.setApiKey(aiServiceProperties.getApiKey());
+        enrichContext(dto, resolveToken(request));
 
         // 保存用户消息到 chat_messages（供前端回显 & 审计）
         saveMessage(dto.getConversationId(), dto.getUserId(), "user", dto.getMessage());
@@ -71,9 +63,7 @@ public class AiChatController {
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(@Valid @RequestBody ChatRequestDTO dto, HttpServletRequest request) {
-        String token = resolveToken(request);
-        enrichContext(dto, token);
-        dto.setApiKey(aiServiceProperties.getApiKey());
+        enrichContext(dto, resolveToken(request));
 
         saveMessage(dto.getConversationId(), dto.getUserId(), "user", dto.getMessage());
 
@@ -156,44 +146,29 @@ public class AiChatController {
     }
 
     private void enrichContext(ChatRequestDTO dto, String token) {
-        Long userId = authTokenStore.getUserId(token);
-        if (userId == null) {
+        if (!StringUtils.hasText(token)) {
+            return;
+        }
+        UserTokenContext ctx;
+        try {
+            ctx = jwtTokenProvider.parseAndValidate(token);
+        } catch (Exception e) {
             return;
         }
 
-        SysUser user = sysUserMapper.selectById(userId);
-        if (user == null) {
-            return;
+        dto.setUserId(ctx.getUserId());
+        dto.setUsername(ctx.getUsername());
+        dto.setPortalType(ctx.getPortalType());
+        if (ctx.getRoles() != null && !ctx.getRoles().isEmpty()) {
+            dto.setRoleCode(ctx.getRoles().get(0));
         }
-
-        dto.setUserId(userId);
-        dto.setUsername(user.getUsername());
-        dto.setRealName(user.getRealName());
-
-        List<SysRole> roles = sysUserMapper.selectRolesByUserId(userId);
-        SysRole primary = LoginAssembler.pickPrimaryRole(roles);
-        String portalType = LoginAssembler.resolvePortalType(user, primary);
-        dto.setPortalType(portalType);
-        if (primary != null) {
-            dto.setRoleCode(primary.getRoleCode());
+        if (ctx.getStaffId() != null) {
+            dto.setStaffId(ctx.getStaffId());
         }
-
-        String accountType = user.getAccountType();
-        if (!StringUtils.hasText(accountType)) {
-            accountType = AccountType.INTERNAL;
-        }
-
-        if (AccountType.STAFF.equals(accountType)) {
-            Staff staff = staffMapper.selectByUserId(userId);
-            if (staff != null) {
-                dto.setStaffId(staff.getId());
-            }
-        }
-
-        if (AccountType.PATIENT.equals(accountType)) {
-            Patient patient = patientMapper.selectByUserId(userId);
+        if (ctx.getPatientId() != null) {
+            dto.setPatientId(ctx.getPatientId());
+            Patient patient = patientMapper.selectByUserId(ctx.getUserId());
             if (patient != null) {
-                dto.setPatientId(patient.getId());
                 dto.setPatientNo(patient.getPatientNo());
                 dto.setPatientName(patient.getName());
                 dto.setPatientGender(patient.getGender());
@@ -202,6 +177,11 @@ public class AiChatController {
                 }
                 dto.setPatientAllergyHistory(patient.getAllergyHistory());
             }
+        }
+
+        SysUser user = sysUserMapper.selectById(ctx.getUserId());
+        if (user != null) {
+            dto.setRealName(user.getRealName());
         }
     }
 

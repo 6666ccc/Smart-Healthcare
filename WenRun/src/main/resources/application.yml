@@ -23,7 +23,6 @@ ai:
     chat-path: /v1/chat
     chat-stream-path: /v1/chat/stream
     health-path: /health
-    api-key: huiliao-ai-internal-key-2026
     connect-timeout: 5s
     read-timeout: 120s
     stream-read-timeout: 10m
@@ -31,3 +30,10 @@ ai:
 logging:
   level:
     com.example.huiliao: debug
+
+oauth:
+  jwt:
+    secret: ${JWT_SECRET:huiliao-jwt-dev-secret-change-in-prod-must-be-32chars}
+    issuer: huiliao
+  default-client-id: huiliao-web
+  max-refresh-tokens-per-client: 3

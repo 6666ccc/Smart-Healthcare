@@ -40,7 +40,8 @@ public class AuthController {
     @PostMapping("/logout")
     public Result<Void> logout(HttpServletRequest request) {
         String token = resolveToken(request);
-        authService.logout(token);
+        String refreshToken = request.getHeader("X-Refresh-Token");
+        authService.logout(token, refreshToken);
         return Result.success();
     }
 

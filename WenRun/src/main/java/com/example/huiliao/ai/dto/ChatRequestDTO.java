@@ -25,10 +25,7 @@ public class ChatRequestDTO {
      */
     private Boolean memoryEnabled;
 
-    /** AI 回调 Java 接口时使用的内部 API Key */
-    private String apiKey;
-
-    // ── 用户上下文 ──
+    // ── 用户上下文（Java 从登录 Token 解析，供 AI 个性化，不传给 Python 作鉴权） ──
     private Long userId;
     private String username;
     private String realName;

@@ -9,7 +9,7 @@ public interface AuthService {
 
     LoginVO login(LoginDTO dto);
 
-    void logout(String token);
+    void logout(String accessToken, String refreshToken);
 
     LoginVO register(RegisterDTO dto);
 
