@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useIsPc } from '../../hooks'
-import { chatStream } from '../../api'
+import { chat } from '../../api'
 import PcLayout from '../Home/pc/PcLayout'
 import MobileTabbar from '../Home/mobile/MobileTabbar'
 import { PageHeader, IconLogo } from '../shared'
@@ -50,7 +50,7 @@ function ChatWelcome({ onSuggest, isPc }) {
   )
 }
 
-function ChatMessage({ message, showAvatar, streaming }) {
+function ChatMessage({ message, showAvatar }) {
   const isUser = message.role === 'user'
   return (
     <div style={{
@@ -66,7 +66,6 @@ function ChatMessage({ message, showAvatar, streaming }) {
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
           </div>
         )}
-        {!isUser && streaming && <span className="chat-stream-cursor">▍</span>}
       </div>
     </div>
   )
@@ -89,7 +88,7 @@ function TypingIndicator({ showAvatar }) {
 }
 
 /* ==================== 移动端 ==================== */
-function AssistantMobile({ sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying, streaming }) {
+function AssistantMobile({ sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying }) {
   const [input, setInput] = useState('')
   const chatEndRef = useRef(null)
   const active = sessions.find(s => s.id === activeId)
@@ -151,10 +150,9 @@ function AssistantMobile({ sessions, activeId, sendMessage, newChat, selectSessi
                 key={i}
                 message={m}
                 showAvatar={false}
-                streaming={replying && streaming && i === messages.length - 1 && m.role === 'assistant'}
               />
             ))}
-            {replying && !streaming && <TypingIndicator showAvatar={false} />}
+            {replying && <TypingIndicator showAvatar={false} />}
             <div ref={chatEndRef} />
           </div>
         )}
@@ -189,7 +187,7 @@ function AssistantMobile({ sessions, activeId, sendMessage, newChat, selectSessi
 }
 
 /* ==================== PC 端 ==================== */
-function AssistantPc({ sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying, streaming }) {
+function AssistantPc({ sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying }) {
   const [input, setInput] = useState('')
   const chatEndRef = useRef(null)
   const active = sessions.find(s => s.id === activeId)
@@ -262,10 +260,9 @@ function AssistantPc({ sessions, activeId, sendMessage, newChat, selectSession, 
                     key={i}
                     message={m}
                     showAvatar
-                    streaming={replying && streaming && i === messages.length - 1 && m.role === 'assistant'}
                   />
                 ))}
-                {replying && !streaming && <TypingIndicator showAvatar />}
+                {replying && <TypingIndicator showAvatar />}
                 <div ref={chatEndRef} />
               </div>
             </div>
@@ -304,7 +301,8 @@ function AssistantPc({ sessions, activeId, sendMessage, newChat, selectSession, 
 function useChat() {
   const [sessions, setSessions] = useState(() => {
     try {
-      const raw = localStorage.getItem('huiliao_ai_sessions')
+      const raw = localStorage.getItem('wenrun_ai_sessions')
+        || localStorage.getItem('huiliao_ai_sessions')
       if (raw) {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) return parsed
@@ -314,11 +312,10 @@ function useChat() {
   })
   const [activeId, setActiveId] = useState(() => sessions[0]?.id || 'default')
   const [replying, setReplying] = useState(false)
-  const [streaming, setStreaming] = useState(false)
   const abortRef = useRef(null)
 
   useEffect(() => {
-    localStorage.setItem('huiliao_ai_sessions', JSON.stringify(sessions))
+    localStorage.setItem('wenrun_ai_sessions', JSON.stringify(sessions))
   }, [sessions])
 
   const sendMessage = async (text) => {
@@ -344,65 +341,32 @@ function useChat() {
     })
 
     setReplying(true)
-    setStreaming(false)
 
     try {
-      await chatStream(
+      const reply = await chat(
         { message: text, conversationId: currentId },
-        {
-          signal: controller.signal,
-          onToken: (chunk) => {
-            setStreaming(true)
-            setSessions(prev =>
-              prev.map(s => {
-                if (s.id !== currentId) return s
-                const msgs = [...s.messages]
-                const last = msgs[msgs.length - 1]
-                if (last?.role === 'assistant') {
-                  msgs[msgs.length - 1] = { ...last, content: last.content + chunk }
-                } else {
-                  msgs.push({ role: 'assistant', content: chunk })
-                }
-                return { ...s, messages: msgs }
-              })
-            )
-          },
-          onDone: (reply) => {
-            setSessions(prev =>
-              prev.map(s => {
-                if (s.id !== currentId) return s
-                const msgs = [...s.messages]
-                const last = msgs[msgs.length - 1]
-                if (last?.role === 'assistant') {
-                  msgs[msgs.length - 1] = { ...last, content: reply || last.content || '抱歉，暂时无法回复。' }
-                } else {
-                  msgs.push({ role: 'assistant', content: reply || '抱歉，暂时无法回复。' })
-                }
-                return { ...s, messages: msgs }
-              })
-            )
-          },
-        },
+      )
+      if (controller.signal.aborted) return
+
+      const assistantMsg = {
+        role: 'assistant',
+        content: reply || '抱歉，暂时无法回复。',
+      }
+      setSessions(prev =>
+        prev.map(s =>
+          s.id === currentId ? { ...s, messages: [...s.messages, assistantMsg] } : s
+        )
       )
     } catch (e) {
       if (e.name === 'AbortError') return
       const errMsg = { role: 'assistant', content: `抱歉，请求出错：${e.message}` }
       setSessions(prev =>
-        prev.map(s => {
-          if (s.id !== currentId) return s
-          const msgs = [...s.messages]
-          const last = msgs[msgs.length - 1]
-          if (last?.role === 'assistant' && !last.content) {
-            msgs[msgs.length - 1] = errMsg
-          } else {
-            msgs.push(errMsg)
-          }
-          return { ...s, messages: msgs }
-        })
+        prev.map(s =>
+          s.id === currentId ? { ...s, messages: [...s.messages, errMsg] } : s
+        )
       )
     } finally {
       setReplying(false)
-      setStreaming(false)
       abortRef.current = null
     }
   }
@@ -424,7 +388,7 @@ function useChat() {
     })
   }
 
-  return { sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying, streaming }
+  return { sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying }
 }
 
 export default function Assistant() {

@@ -1,13 +1,14 @@
 import { useState, useCallback, useMemo } from 'react'
 import { AuthContext } from './authContext'
-import { login as loginApi, logout as logoutApi } from '../api/modules/user'
+import { login as loginApi, register as registerApi, logout as logoutApi } from '../api/modules/user'
 import { setTokenBundle, clearTokens, getToken } from '../api/request'
 
-const USER_KEY = 'huiliao_user'
+const USER_KEY = 'wenrun_user'
+const LEGACY_USER_KEY = 'huiliao_user'
 
 function loadUser() {
   try {
-    const raw = localStorage.getItem(USER_KEY)
+    const raw = localStorage.getItem(USER_KEY) || localStorage.getItem(LEGACY_USER_KEY)
     return raw ? JSON.parse(raw) : null
   } catch {
     return null
@@ -19,24 +20,20 @@ function saveUser(user) {
     localStorage.setItem(USER_KEY, JSON.stringify(user))
   } else {
     localStorage.removeItem(USER_KEY)
+    localStorage.removeItem(LEGACY_USER_KEY)
   }
 }
 
 function applyLoginData(data) {
-  setTokenBundle({
-    accessToken: data.accessToken || data.token,
-    refreshToken: data.refreshToken,
-    expiresIn: data.expiresIn,
-  })
+  setTokenBundle({ accessToken: data.accessToken || data.token })
   const u = {
     userId: data.userId,
     username: data.username,
     realName: data.realName,
     roleCode: data.roleCode,
     roleName: data.roleName,
-    portalType: data.portalType,
+    portalType: data.portalType || 'patient',
     patientId: data.patientId,
-    staffId: data.staffId,
     roles: data.roles,
   }
   saveUser(u)
@@ -56,7 +53,21 @@ export function AuthProvider({ children }) {
       const data = await loginApi({ username, password })
       const u = applyLoginData(data)
       setUser(u)
-      return { success: true }
+      return { success: true, user: u }
+    } catch (e) {
+      return { success: false, error: e.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const register = useCallback(async (form) => {
+    setLoading(true)
+    try {
+      const data = await registerApi(form)
+      const u = applyLoginData(data)
+      setUser(u)
+      return { success: true, user: u }
     } catch (e) {
       return { success: false, error: e.message }
     } finally {
@@ -65,28 +76,23 @@ export function AuthProvider({ children }) {
   }, [])
 
   const logout = useCallback(async () => {
-    try { await logoutApi() } catch { /* 即使后端调用失败也清理本地态 */ }
+    try { await logoutApi() } catch { /* ignore */ }
     clearTokens()
     saveUser(null)
     setUser(null)
   }, [])
 
   const updateUser = useCallback((partial) => {
-    const next = { ...user, ...partial }
-    saveUser(next)
-    setUser(next)
-  }, [user])
+    setUser((prev) => {
+      const next = { ...prev, ...partial }
+      saveUser(next)
+      return next
+    })
+  }, [])
 
   const value = useMemo(() => ({
-    user,
-    token,
-    loading,
-    isAuthenticated,
-    login,
-    logout,
-    updateUser,
-    applyLoginData,
-  }), [user, token, loading, isAuthenticated, login, logout, updateUser])
+    user, token, loading, isAuthenticated, login, register, logout, updateUser, applyLoginData,
+  }), [user, token, loading, isAuthenticated, login, register, logout, updateUser])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

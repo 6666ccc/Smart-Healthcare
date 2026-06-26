@@ -9,21 +9,11 @@ export function RequireAuth() {
   return <Outlet />
 }
 
-/** 已登录 → 对应门户首页 */
+/** 已登录 → 患者首页 */
 export function GuestOnly() {
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated } = useAuth()
   if (isAuthenticated) {
-    return <Navigate to={homePath(user?.portalType)} replace />
-  }
-  return <Outlet />
-}
-
-/** 限制特定门户访问 */
-export function RequirePortal({ portal }) {
-  const { user } = useAuth()
-  const current = user?.portalType || 'patient'
-  if (current !== portal) {
-    return <Navigate to={homePath(current)} replace />
+    return <Navigate to={homePath()} replace />
   }
   return <Outlet />
 }

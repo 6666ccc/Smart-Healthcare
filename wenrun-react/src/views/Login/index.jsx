@@ -5,16 +5,21 @@ import { homePath } from '../../utils/portal'
 import { IconLogo } from '../shared'
 import '../shared/views.css'
 
+const EMPTY_REG = {
+  username: '',
+  password: '',
+  confirmPassword: '',
+  phone: '',
+}
+
 export default function Login() {
-  const { login, loading } = useAuth()
+  const { login, register, loading } = useAuth()
   const navigate = useNavigate()
 
   const [form, setForm] = useState({ username: '', password: '' })
   const [error, setError] = useState('')
   const [showRegister, setShowRegister] = useState(false)
-  const [regForm, setRegForm] = useState({
-    username: '', password: '', confirmPassword: '', phone: '',
-  })
+  const [regForm, setRegForm] = useState(EMPTY_REG)
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -34,8 +39,7 @@ export default function Login() {
     }
     const res = await login(form.username, form.password)
     if (res.success) {
-      const saved = JSON.parse(localStorage.getItem('huiliao_user') || '{}')
-      navigate(homePath(saved.portalType), { replace: true })
+      navigate(homePath(), { replace: true })
     } else {
       setError(res.error || '登录失败')
     }
@@ -51,32 +55,27 @@ export default function Login() {
       setError('密码至少 6 位')
       return
     }
-    const { register } = await import('../../api/modules/user')
-    try {
-      const data = await register(regForm)
-      const { setTokenBundle } = await import('../../api/request')
-      setTokenBundle({
-        accessToken: data.accessToken || data.token,
-        refreshToken: data.refreshToken,
-        expiresIn: data.expiresIn,
-      })
-      const u = {
-        userId: data.userId, username: data.username,
-        realName: data.realName, roleCode: data.roleCode,
-        roleName: data.roleName, portalType: data.portalType,
-        patientId: data.patientId, staffId: data.staffId,
-        roles: data.roles,
-      }
-      localStorage.setItem('huiliao_user', JSON.stringify(u))
-      navigate(homePath(u.portalType), { replace: true })
-    } catch (e) {
-      setError(e.message || '注册失败')
+    const res = await register(regForm)
+    if (res.success) {
+      navigate(homePath(), { replace: true })
+    } else {
+      setError(res.error || '注册失败')
     }
+  }
+
+  const switchToRegister = () => {
+    setShowRegister(true)
+    setError('')
+  }
+
+  const switchToLogin = () => {
+    setShowRegister(false)
+    setRegForm(EMPTY_REG)
+    setError('')
   }
 
   return (
     <div className="login-scene view-grain">
-      {/* 左侧品牌区 — PC */}
       <aside className="login-scene__brand">
         <div className="login-scene__brand-glow" />
         <div className="login-scene__brand-deco">温</div>
@@ -90,7 +89,6 @@ export default function Login() {
         </blockquote>
       </aside>
 
-      {/* 右侧表单区 */}
       <div className="login-scene__form-panel">
         <div className="login-card">
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
@@ -107,7 +105,7 @@ export default function Login() {
               {showRegister ? '创建账户' : '欢迎回来'}
             </h1>
             <p style={{ color: 'var(--c-sub)', fontSize: '0.88rem', marginTop: 8 }}>
-              {showRegister ? '加入温润诊所，开启智慧诊疗之旅' : '登录您的患者账户'}
+              {showRegister ? '注册患者账户，即可在线挂号与缴费' : '登录您的患者账户'}
             </p>
           </div>
 
@@ -163,7 +161,7 @@ export default function Login() {
                 还没有账户？{' '}
                 <button
                   type="button"
-                  onClick={() => { setShowRegister(true); setError('') }}
+                  onClick={switchToRegister}
                   style={{
                     background: 'none', border: 'none', color: 'var(--c-accent)',
                     cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem',
@@ -195,15 +193,14 @@ export default function Login() {
                 <input className="input" name="phone" placeholder="输入手机号"
                   value={regForm.phone} onChange={handleRegChange} />
               </div>
-              <button className="btn btn--primary btn--lg" type="submit"
+              <button className="btn btn--primary btn--lg" type="submit" disabled={loading}
                 style={{ width: '100%', marginTop: 8 }}>
-                注册并登录
+                {loading ? '注册中…' : '注册并登录'}
               </button>
 
               <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.85rem', color: 'var(--c-sub)' }}>
                 已有账户？{' '}
-                <button type="button"
-                  onClick={() => { setShowRegister(false); setError('') }}
+                <button type="button" onClick={switchToLogin}
                   style={{ background: 'none', border: 'none', color: 'var(--c-accent)',
                     cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}>
                   返回登录
@@ -214,7 +211,7 @@ export default function Login() {
 
           <div className="login-demo">
             <p className="login-demo__title">演示账号（密码均为 password）</p>
-            <p>患者端：patient01 · 医生端：doctor01 · 管理端：admin</p>
+            <p>患者：patient01</p>
           </div>
         </div>
       </div>

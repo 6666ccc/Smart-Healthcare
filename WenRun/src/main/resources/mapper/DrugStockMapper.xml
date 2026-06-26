@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.huiliao.mapper.DrugStockMapper">
-    <select id="selectList" resultType="com.example.huiliao.vo.DrugStockVO">
+<mapper namespace="com.example.wenrun.mapper.DrugStockMapper">
+    <select id="selectList" resultType="com.example.wenrun.vo.DrugStockVO">
         SELECT d.id AS drugId, d.drug_code AS drugCode, d.drug_name AS drugName,
                d.spec, d.unit, s.quantity, s.warn_quantity AS warnQuantity,
                (s.quantity &lt;= s.warn_quantity) AS lowStock
@@ -15,10 +15,10 @@
         </where>
         ORDER BY s.quantity
     </select>
-    <select id="selectByDrugId" resultType="com.example.huiliao.entity.DrugStock">
+    <select id="selectByDrugId" resultType="com.example.wenrun.entity.DrugStock">
         SELECT * FROM drug_stock WHERE drug_id = #{drugId}
     </select>
-    <select id="selectByDrugIdForUpdate" resultType="com.example.huiliao.entity.DrugStock">
+    <select id="selectByDrugIdForUpdate" resultType="com.example.wenrun.entity.DrugStock">
         SELECT * FROM drug_stock WHERE drug_id = #{drugId} FOR UPDATE
     </select>
     <insert id="insert">

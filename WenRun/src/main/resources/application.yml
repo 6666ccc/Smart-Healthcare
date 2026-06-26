@@ -3,17 +3,17 @@ server:
 
 spring:
   application:
-    name: HuiLiao
+    name: WenRun
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/huiliao?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/wenrun?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     username: root
     password: 123456789
 
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
-  type-aliases-package: com.example.huiliao.entity
+  type-aliases-package: com.example.wenrun.entity
   configuration:
     map-underscore-to-camel-case: true
 
@@ -22,6 +22,7 @@ ai:
     base-url: http://127.0.0.1:8000
     chat-path: /v1/chat
     chat-stream-path: /v1/chat/stream
+    java-chat-path: /java/chat
     health-path: /health
     connect-timeout: 5s
     read-timeout: 120s
@@ -29,11 +30,13 @@ ai:
 
 logging:
   level:
-    com.example.huiliao: debug
+    com.example.wenrun: debug
 
-oauth:
-  jwt:
-    secret: ${JWT_SECRET:huiliao-jwt-dev-secret-change-in-prod-must-be-32chars}
-    issuer: huiliao
-  default-client-id: huiliao-web
-  max-refresh-tokens-per-client: 3
+# JWT 配置
+jwt:
+  secret: ${JWT_SECRET:wenrun-jwt-dev-secret-change-in-prod-must-be-32chars}
+  expiry: ${JWT_EXPIRY:604800}
+
+# API Key 配置（服务间调用）
+wenrun:
+  api-key: ${WENRUN_API_KEY:wenrun-dev-api-key-change-in-prod}

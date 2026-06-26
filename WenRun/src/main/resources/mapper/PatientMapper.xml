@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.huiliao.mapper.PatientMapper">
+<mapper namespace="com.example.wenrun.mapper.PatientMapper">
 
-    <resultMap id="BaseResultMap" type="com.example.huiliao.entity.Patient">
+    <resultMap id="BaseResultMap" type="com.example.wenrun.entity.Patient">
         <id column="id" property="id"/>
         <result column="patient_no" property="patientNo"/>
         <result column="name" property="name"/>

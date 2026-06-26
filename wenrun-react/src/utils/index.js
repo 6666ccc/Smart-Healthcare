@@ -137,4 +137,4 @@ export function getStatusLabel(item) {
   return map?.label || '未知'
 }
 
-export { homePath, isDoctorPortal, isPatientPortal } from './portal'
+export { homePath, isPatientPortal } from './portal'

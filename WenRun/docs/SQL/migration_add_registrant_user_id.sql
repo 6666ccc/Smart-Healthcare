@@ -4,7 +4,6 @@
 --       自己的挂号 + 曾帮别人挂的号（如家长给子女挂号）
 -- ============================================================
 
-USE huiliao;
 
 ALTER TABLE registration
     ADD COLUMN registrant_user_id bigint DEFAULT NULL

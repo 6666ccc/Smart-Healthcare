@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.huiliao.mapper.ExamRequestMapper">
-    <select id="selectPendingByVisitId" resultType="com.example.huiliao.entity.ExamRequest">
+<mapper namespace="com.example.wenrun.mapper.ExamRequestMapper">
+    <select id="selectPendingByVisitId" resultType="com.example.wenrun.entity.ExamRequest">
         SELECT * FROM exam_request WHERE visit_id = #{visitId} AND status = #{status}
     </select>
-    <select id="selectByVisitId" resultType="com.example.huiliao.entity.ExamRequest">
+    <select id="selectByVisitId" resultType="com.example.wenrun.entity.ExamRequest">
         SELECT * FROM exam_request WHERE visit_id = #{visitId}
     </select>
-    <select id="selectById" resultType="com.example.huiliao.entity.ExamRequest">
+    <select id="selectById" resultType="com.example.wenrun.entity.ExamRequest">
         SELECT * FROM exam_request WHERE id = #{id}
     </select>
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
