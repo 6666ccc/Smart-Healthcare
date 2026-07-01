@@ -26,6 +26,16 @@ public class ScheduleServiceImpl implements ScheduleService {
         return scheduleMapper.selectList(deptId, workDate, staffId);
     }
 
+    /** 根据 ID 查询排班（含科室、医生名称） */
+    @Override
+    public ScheduleVO getDetail(Long id) {
+        ScheduleVO schedule = scheduleMapper.selectVOById(id);
+        if (schedule == null) {
+            throw new BusinessException("排班不存在");
+        }
+        return schedule;
+    }
+
     /** 根据 ID 查询排班 */
     @Override
     public Schedule getById(Long id) {

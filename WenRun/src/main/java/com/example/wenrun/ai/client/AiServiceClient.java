@@ -2,7 +2,6 @@ package com.example.wenrun.ai.client;
 
 import com.example.wenrun.ai.config.AiServiceProperties;
 import com.example.wenrun.ai.dto.ChatRequestDTO;
-import com.example.wenrun.ai.dto.JavaChatRequestDTO;
 import com.example.wenrun.ai.exception.AiServiceException;
 import com.example.wenrun.ai.vo.ChatResponseVO;
 import com.example.wenrun.ai.vo.ChatStreamEventVO;
@@ -23,7 +22,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
- * AI 服务客户端，调用 Python FastAPI（聊天、健康检查）。
+ * AI 服务客户端，调用 Python FastAPI（/v1/chat 聊天、健康检查）。
+ * <p>
+ * Java 集成聊天（含 [HITL]）见 {@link JavaAiClient}。
  */
 @Slf4j
 @Component
@@ -66,7 +67,7 @@ public class AiServiceClient {
                     .body(request)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (req, res) -> {
-                        String detail = readBody(res.getBody());
+                        String detail = AiClientSupport.readBody(res.getBody());
                         throw new AiServiceException(
                                 "AI 服务响应异常: HTTP " + res.getStatusCode().value()
                                         + (detail.isEmpty() ? "" : " - " + detail));
@@ -101,7 +102,7 @@ public class AiServiceClient {
                     .body(request)
                     .exchange((req, res) -> {
                         if (res.getStatusCode().isError()) {
-                            String detail = readBody(res.getBody());
+                            String detail = AiClientSupport.readBody(res.getBody());
                             throw new AiServiceException(
                                     "AI 流式服务响应异常: HTTP " + res.getStatusCode().value()
                                             + (detail.isEmpty() ? "" : " - " + detail));
@@ -143,42 +144,6 @@ public class AiServiceClient {
     }
 
     /**
-     * 调用 FastAPI {@code POST /java/chat}，走 LangGraph 路由图进行意图分析 + Agent 分发。
-     * 返回完整的路由状态（intent / target_agent / confidence / final_output 等）。
-     */
-    @SuppressWarnings("unchecked")
-    public java.util.Map<String, Object> javaChat(JavaChatRequestDTO request) {
-        if (request == null || !StringUtils.hasText(request.getContent())) {
-            throw new AiServiceException("消息不能为空");
-        }
-        request.setContent(request.getContent().trim());
-
-        log.debug("调用 Java 集成聊天: POST {}{}", properties.getBaseUrl(), properties.getJavaChatPath());
-        try {
-            java.util.Map<String, Object> response = aiRestClient.post()
-                    .uri(properties.getJavaChatPath())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::isError, (req, res) -> {
-                        String detail = readBody(res.getBody());
-                        throw new AiServiceException(
-                                "Java 集成聊天异常: HTTP " + res.getStatusCode().value()
-                                        + (detail.isEmpty() ? "" : " - " + detail));
-                    })
-                    .body(java.util.Map.class);
-            if (response == null) {
-                throw new AiServiceException("Java 集成聊天返回为空");
-            }
-            return response;
-        } catch (AiServiceException ex) {
-            throw ex;
-        } catch (RestClientException ex) {
-            throw new AiServiceException("无法连接 AI 服务，请确认 FastAPI 已启动", ex);
-        }
-    }
-
-    /**
      * 探测 FastAPI {@code GET /health}，返回 {@code {"status":"ok"}} 时视为可用。
      */
     public boolean isHealthy() {
@@ -195,17 +160,6 @@ public class AiServiceClient {
         } catch (RestClientException ex) {
             log.debug("AI 服务不可用: {}", ex.getMessage());
             return false;
-        }
-    }
-
-    private static String readBody(java.io.InputStream body) {
-        if (body == null) {
-            return "";
-        }
-        try (body) {
-            return new String(body.readAllBytes(), StandardCharsets.UTF_8).trim();
-        } catch (Exception ex) {
-            return "";
         }
     }
 }

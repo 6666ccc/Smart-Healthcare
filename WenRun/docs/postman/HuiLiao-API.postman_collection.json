@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "huiliao-api-collection",
     "name": "慧疗 HuiLiao 门诊 API",
-    "description": "## 使用说明\n\n1. **导入**：Postman → Import → 选择本文件。\n2. **环境**：集合变量 `baseUrl` 默认 `http://localhost:8080`，可按需修改。\n3. **登录**：先执行「认证 → 登录」；成功后会自动把 `token` 写入集合变量。\n4. **鉴权**：除「健康检查」「登录」外，其余接口需 Bearer Token（集合已配置 `{{token}}`）。也可使用请求头 `X-Token: {{token}}`。\n5. **演示账号**（`demo_data.sql`）：`admin` / `doctor01` / `cashier01` / `pharma01`，密码均为 `password`。\n\n## 统一响应\n\n```json\n{\n  \"code\": 200,\n  \"message\": \"success\",\n  \"data\": {}\n}\n```\n\n`code = 200` 表示成功；失败时 `data` 为 `null`。\n\n## AI 接口\n\n需先启动 Python FastAPI（默认 `http://127.0.0.1:8000`），Java 再转发至 `/v1/chat`。",
+    "description": "## 使用说明\n\n1. **导入**：Postman → Import → 选择本文件。\n2. **环境**：集合变量 `baseUrl` 默认 `http://localhost:8080`，可按需修改。\n3. **登录**：先执行「系统 → 登录」；成功后会自动把 `token` 写入集合变量（兼容 `token` / `accessToken` 字段）。\n4. **注册**：患者自助注册见「系统 → 注册」，成功后同样自动保存 token。\n5. **鉴权**：除「健康检查」「登录」「注册」外，其余接口需 Bearer Token（集合已配置 `{{token}}`）。也可使用请求头 `X-Token: {{token}}`。\n6. **演示账号**（`demo_data.sql`）：`admin` / `doctor01` / `cashier01` / `pharma01`，密码均为 `password`。\n7. **医生端过滤**：挂号、待诊、就诊列表在医生登录时会自动按当前登录医生过滤；也可显式传 `staffId` 覆盖。\n\n## 统一响应\n\n```json\n{\n  \"code\": 200,\n  \"message\": \"success\",\n  \"data\": {}\n}\n```\n\n`code = 200` 表示成功；失败时 `data` 为 `null`。\n\n## AI 接口\n\n需先启动 Python FastAPI（默认 `http://127.0.0.1:8000`）。\n- `POST /api/ai/chat` — 普通问答，返回 `data.reply`\n- `POST /api/ai/chat/stream` — SSE 流式输出\n- `POST /api/ai/java/chat` — 转发至 Python `/java/chat`（LangGraph 路由）\n\nAI 请求建议携带 `conversationId`（UUID），用于会话级记忆隔离。",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -27,7 +27,8 @@
     { "key": "deptId", "value": "1" },
     { "key": "staffId", "value": "1" },
     { "key": "drugId", "value": "1" },
-    { "key": "itemId", "value": "1" }
+    { "key": "itemId", "value": "1" },
+    { "key": "conversationId", "value": "00000000-0000-4000-8000-000000000001" }
   ],
   "item": [
     {
@@ -52,8 +53,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "const res = pm.response.json();",
-                  "if (res.code === 200 && res.data && res.data.token) {",
-                  "    pm.collectionVariables.set('token', res.data.token);",
+                  "const token = res.data && (res.data.token || res.data.accessToken);",
+                  "if (res.code === 200 && token) {",
+                  "    pm.collectionVariables.set('token', token);",
                   "    console.log('已保存 token');",
                   "} else {",
                   "    console.warn('登录失败，未写入 token');",
@@ -71,7 +73,39 @@
               "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password\"\n}"
             },
             "url": "{{baseUrl}}/api/auth/login",
-            "description": "演示账号：admin / doctor01 / cashier01 / pharma01，密码均为 password。成功后自动保存 token。"
+            "description": "演示账号：admin / doctor01 / cashier01 / pharma01，密码均为 password。成功后自动保存 token（兼容 accessToken）。"
+          }
+        },
+        {
+          "name": "注册",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const token = res.data && (res.data.token || res.data.accessToken);",
+                  "if (res.code === 200 && token) {",
+                  "    pm.collectionVariables.set('token', token);",
+                  "    console.log('注册成功，已保存 token');",
+                  "} else {",
+                  "    console.warn('注册失败，未写入 token');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"patient_demo\",\n  \"password\": \"password\",\n  \"confirmPassword\": \"password\",\n  \"phone\": \"13900001234\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "患者自助注册。密码不少于 6 位；confirmPassword 须与 password 一致。成功后自动保存 token，真实姓名可在「个人中心 → 更新个人资料」补充。"
           }
         },
         {
@@ -282,7 +316,8 @@
               "mode": "raw",
               "raw": "{\n  \"drugCode\": \"D001\",\n  \"drugName\": \"阿莫西林胶囊\",\n  \"spec\": \"0.25g*24粒\",\n  \"unit\": \"盒\",\n  \"price\": 15.50,\n  \"manufacturer\": \"某某制药\",\n  \"status\": 1\n}"
             },
-            "url": "{{baseUrl}}/api/drugs"
+            "url": "{{baseUrl}}/api/drugs",
+            "description": "新建药品，同时创建初始库存记录。"
           }
         },
         {
@@ -415,14 +450,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/registrations?patientId=&status=",
+              "raw": "{{baseUrl}}/api/registrations?patientId=&userId=&registrantUserId=&staffId=&status=",
               "host": ["{{baseUrl}}"],
               "path": ["api", "registrations"],
               "query": [
                 { "key": "patientId", "value": "", "description": "患者ID（可选）" },
+                { "key": "userId", "value": "", "description": "患者绑定用户ID（可选）" },
+                { "key": "registrantUserId", "value": "", "description": "挂号操作人用户ID（可选）" },
+                { "key": "staffId", "value": "", "description": "医生ID（可选；医生登录时默认当前医生）" },
                 { "key": "status", "value": "", "description": "状态（可选）" }
               ]
-            }
+            },
+            "description": "查询挂号列表。医生端登录时自动按当前登录医生过滤。"
           }
         },
         {
@@ -430,8 +469,15 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/registrations/pending",
-            "description": "已挂号、未接诊的列表。"
+            "url": {
+              "raw": "{{baseUrl}}/api/registrations/pending?staffId=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registrations", "pending"],
+              "query": [
+                { "key": "staffId", "value": "", "description": "医生ID（可选；医生登录时默认当前医生）" }
+              ]
+            },
+            "description": "已挂号、未接诊的列表。医生端登录时自动过滤。"
           }
         },
         {
@@ -471,9 +517,10 @@
               "path": ["api", "visits"],
               "query": [
                 { "key": "status", "value": "", "description": "状态（可选）" },
-                { "key": "staffId", "value": "", "description": "医生ID（可选）" }
+                { "key": "staffId", "value": "", "description": "医生ID（可选；医生登录时默认当前医生）" }
               ]
-            }
+            },
+            "description": "查询就诊记录列表。医生端登录时自动按当前登录医生过滤。"
           }
         },
         {
@@ -703,6 +750,24 @@
       ]
     },
     {
+      "name": "个人中心",
+      "item": [
+        {
+          "name": "更新个人资料",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"realName\": \"张三\",\n  \"phone\": \"13800138000\",\n  \"gender\": 1,\n  \"birthDate\": \"1990-01-15\",\n  \"idCard\": \"110101199001151234\",\n  \"address\": \"北京市朝阳区\",\n  \"allergyHistory\": \"青霉素过敏\"\n}"
+            },
+            "url": "{{baseUrl}}/api/user/profile",
+            "description": "更新当前登录用户的个人资料。字段均可选；gender：0女 1男 2未知。患者注册后可通过此接口补充真实姓名等信息。"
+          }
+        }
+      ]
+    },
+    {
       "name": "AI 问答",
       "item": [
         {
@@ -712,10 +777,39 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"message\": \"感冒一般有哪些症状？\"\n}"
+              "raw": "{\n  \"message\": \"感冒一般有哪些症状？\",\n  \"conversationId\": \"{{conversationId}}\",\n  \"memoryEnabled\": true\n}"
             },
             "url": "{{baseUrl}}/api/ai/chat",
-            "description": "需先启动 Python FastAPI（默认 8000 端口）。Java 转发至 /v1/chat，返回 data.reply。"
+            "description": "普通 AI 问答。需先启动 Python FastAPI。`conversationId` 建议每次新建对话生成 UUID，同一会话内复用；`memoryEnabled` 可选，默认启用记忆。登录后 Java 会从 Token 自动注入 userId、患者/医生上下文。返回 data.reply。"
+          }
+        },
+        {
+          "name": "AI 流式聊天",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "text/event-stream" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"请简要介绍感冒的处理建议\",\n  \"conversationId\": \"{{conversationId}}\",\n  \"memoryEnabled\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/ai/chat/stream",
+            "description": "SSE 流式输出（Content-Type: text/event-stream）。事件类型含 token、done、error。Postman 可查看原始 SSE 响应流。"
+          }
+        },
+        {
+          "name": "Java 聊天转发",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"帮我查一下患者信息\",\n  \"sessionId\": \"{{conversationId}}\",\n  \"extra\": {}\n}"
+            },
+            "url": "{{baseUrl}}/api/ai/java/chat",
+            "description": "转发至 Python POST /java/chat（LangGraph 路由 Agent）。`sessionId` 对应会话 ID；登录后 Java 自动注入 userId 与 access_token。返回 data 含 final_output 等字段。"
           }
         }
       ]

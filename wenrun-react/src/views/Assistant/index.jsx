@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useIsPc } from '../../hooks'
-import { chat } from '../../api'
+import { chat, chatResume } from '../../api'
+import HitlChoiceBar from './HitlChoiceBar'
 import PcLayout from '../Home/pc/PcLayout'
 import MobileTabbar from '../Home/mobile/MobileTabbar'
 import { PageHeader, IconLogo } from '../shared'
@@ -50,22 +51,43 @@ function ChatWelcome({ onSuggest, isPc }) {
   )
 }
 
-function ChatMessage({ message, showAvatar }) {
+function ChatMessage({ message, showAvatar, onHitlDecide, replying }) {
   const isUser = message.role === 'user'
+  const showHitl = message.hitl?.status === 'interrupt' && !message.hitl?.resolved
+
+  if (isUser) {
+    return (
+      <div style={{
+        display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', gap: 8,
+        alignSelf: 'flex-end', maxWidth: '80%',
+      }}>
+        <div className="chat-bubble chat-bubble--user">{message.content}</div>
+      </div>
+    )
+  }
+
+  if (showHitl) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, width: '100%' }}>
+        {showAvatar && <div className="chat-avatar"><IconLogo size={16} /></div>}
+        <HitlChoiceBar
+          pendingActions={message.hitl.pendingActions}
+          disabled={replying}
+          onDecide={(type, extra) => onHitlDecide?.(message.id, type, extra)}
+        />
+      </div>
+    )
+  }
+
   return (
     <div style={{
-      display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start',
-      alignItems: isUser ? 'flex-end' : 'flex-start', gap: 8,
+      display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 8, width: '100%',
     }}>
-      {!isUser && showAvatar && <div className="chat-avatar"><IconLogo size={16} /></div>}
-      <div className={`chat-bubble chat-bubble--${message.role}`}>
-        {isUser ? (
-          message.content
-        ) : (
-          <div className="chat-md">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-          </div>
-        )}
+      {showAvatar && <div className="chat-avatar"><IconLogo size={16} /></div>}
+      <div className="chat-bubble chat-bubble--assistant" style={{ maxWidth: '100%', flex: 1 }}>
+        <div className="chat-md">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+        </div>
       </div>
     </div>
   )
@@ -88,7 +110,7 @@ function TypingIndicator({ showAvatar }) {
 }
 
 /* ==================== 移动端 ==================== */
-function AssistantMobile({ sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying }) {
+function AssistantMobile({ sessions, activeId, sendMessage, resolveHitl, newChat, selectSession, deleteSession, replying }) {
   const [input, setInput] = useState('')
   const chatEndRef = useRef(null)
   const active = sessions.find(s => s.id === activeId)
@@ -145,11 +167,13 @@ function AssistantMobile({ sessions, activeId, sendMessage, newChat, selectSessi
           <ChatWelcome onSuggest={sendMessage} isPc={false} />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {messages.map((m, i) => (
+            {messages.map((m) => (
               <ChatMessage
-                key={i}
+                key={m.id}
                 message={m}
                 showAvatar={false}
+                onHitlDecide={resolveHitl}
+                replying={replying}
               />
             ))}
             {replying && <TypingIndicator showAvatar={false} />}
@@ -187,7 +211,7 @@ function AssistantMobile({ sessions, activeId, sendMessage, newChat, selectSessi
 }
 
 /* ==================== PC 端 ==================== */
-function AssistantPc({ sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying }) {
+function AssistantPc({ sessions, activeId, sendMessage, resolveHitl, newChat, selectSession, deleteSession, replying }) {
   const [input, setInput] = useState('')
   const chatEndRef = useRef(null)
   const active = sessions.find(s => s.id === activeId)
@@ -255,11 +279,13 @@ function AssistantPc({ sessions, activeId, sendMessage, newChat, selectSession, 
           ) : (
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 24px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 720, margin: '0 auto' }}>
-                {messages.map((m, i) => (
+                {messages.map((m) => (
                   <ChatMessage
-                    key={i}
+                    key={m.id}
                     message={m}
                     showAvatar
+                    onHitlDecide={resolveHitl}
+                    replying={replying}
                   />
                 ))}
                 {replying && <TypingIndicator showAvatar />}
@@ -298,14 +324,59 @@ function AssistantPc({ sessions, activeId, sendMessage, newChat, selectSession, 
 }
 
 /* ========== Chat Hook ========== */
+let _msgSeq = 0
+function nextMsgId() {
+  _msgSeq += 1
+  return `msg_${Date.now()}_${_msgSeq}`
+}
+
+function normalizeSessions(raw) {
+  if (!Array.isArray(raw)) return [{ id: 'default', title: '新对话', messages: [] }]
+  return raw.map((session) => ({
+    ...session,
+    messages: (session.messages || []).map((m, i) =>
+      m.id ? m : { ...m, id: `legacy_${session.id}_${i}` }
+    ),
+  }))
+}
+
+function buildAssistantMessage(data) {
+  const msg = {
+    id: nextMsgId(),
+    role: 'assistant',
+    content: data?.final_output || data?.reply || '抱歉，暂时无法回复。',
+  }
+  if (data?.hitl_status === 'interrupt') {
+    msg.hitl = {
+      status: 'interrupt',
+      pendingActions: data.hitl_pending_actions || [],
+      resolved: false,
+    }
+  }
+  return msg
+}
+
+function buildHitlDecisions(pendingActions, decisionType, extraMessage) {
+  const count = Math.max(pendingActions?.length || 0, 1)
+  return Array.from({ length: count }, () => {
+    if (decisionType === 'accept') {
+      return { type: 'approve' }
+    }
+    if (decisionType === 'append') {
+      return { type: 'reject', message: `用户补充说明：${extraMessage}` }
+    }
+    return { type: 'reject', message: '用户拒绝执行该操作' }
+  })
+}
+
 function useChat() {
   const [sessions, setSessions] = useState(() => {
     try {
       const raw = localStorage.getItem('wenrun_ai_sessions')
         || localStorage.getItem('huiliao_ai_sessions')
       if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        const parsed = normalizeSessions(JSON.parse(raw))
+        if (parsed.length > 0) return parsed
       }
     } catch { /* ignore */ }
     return [{ id: 'default', title: '新对话', messages: [] }]
@@ -327,7 +398,7 @@ function useChat() {
     const controller = new AbortController()
     abortRef.current = controller
 
-    const userMsg = { role: 'user', content: text }
+    const userMsg = { id: nextMsgId(), role: 'user', content: text }
     setSessions(prev => {
       const updated = prev.map(s =>
         s.id === currentId ? { ...s, messages: [...s.messages, userMsg] } : s
@@ -343,15 +414,12 @@ function useChat() {
     setReplying(true)
 
     try {
-      const reply = await chat(
+      const data = await chat(
         { message: text, conversationId: currentId },
       )
       if (controller.signal.aborted) return
 
-      const assistantMsg = {
-        role: 'assistant',
-        content: reply || '抱歉，暂时无法回复。',
-      }
+      const assistantMsg = buildAssistantMessage(data)
       setSessions(prev =>
         prev.map(s =>
           s.id === currentId ? { ...s, messages: [...s.messages, assistantMsg] } : s
@@ -359,7 +427,7 @@ function useChat() {
       )
     } catch (e) {
       if (e.name === 'AbortError') return
-      const errMsg = { role: 'assistant', content: `抱歉，请求出错：${e.message}` }
+      const errMsg = { id: nextMsgId(), role: 'assistant', content: `抱歉，请求出错：${e.message}` }
       setSessions(prev =>
         prev.map(s =>
           s.id === currentId ? { ...s, messages: [...s.messages, errMsg] } : s
@@ -368,6 +436,64 @@ function useChat() {
     } finally {
       setReplying(false)
       abortRef.current = null
+    }
+  }
+
+  const resolveHitl = async (messageId, decisionType, extraMessage) => {
+    let currentId = activeId
+    if (!sessions.find(s => s.id === currentId)) {
+      currentId = sessions[0]?.id
+    }
+
+    const session = sessions.find(s => s.id === currentId)
+    const targetMsg = session?.messages?.find(m => m.id === messageId)
+    if (!targetMsg?.hitl || targetMsg.hitl.resolved) return
+
+    const pendingActions = targetMsg.hitl.pendingActions || []
+    const decisions = buildHitlDecisions(pendingActions, decisionType, extraMessage)
+
+    const decisionLabel = decisionType === 'accept'
+      ? '接受'
+      : decisionType === 'reject'
+        ? '拒绝'
+        : `追加信息：${extraMessage}`
+
+    setSessions(prev => prev.map(s => {
+      if (s.id !== currentId) return s
+      return {
+        ...s,
+        messages: [
+          ...s.messages.map(m =>
+            m.id === messageId
+              ? { ...m, hitl: { ...m.hitl, resolved: true, decision: decisionType } }
+              : m
+          ),
+          { id: nextMsgId(), role: 'user', content: decisionType === 'append' ? decisionLabel : `[${decisionLabel}]` },
+        ],
+      }
+    }))
+
+    setReplying(true)
+    try {
+      const data = await chatResume({
+        sessionId: currentId,
+        decisions,
+      })
+      const assistantMsg = buildAssistantMessage(data)
+      setSessions(prev =>
+        prev.map(s =>
+          s.id === currentId ? { ...s, messages: [...s.messages, assistantMsg] } : s
+        )
+      )
+    } catch (e) {
+      const errMsg = { id: nextMsgId(), role: 'assistant', content: `操作失败：${e.message}` }
+      setSessions(prev =>
+        prev.map(s =>
+          s.id === currentId ? { ...s, messages: [...s.messages, errMsg] } : s
+        )
+      )
+    } finally {
+      setReplying(false)
     }
   }
 
@@ -388,7 +514,7 @@ function useChat() {
     })
   }
 
-  return { sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying }
+  return { sessions, activeId, sendMessage, resolveHitl, newChat, selectSession, deleteSession, replying }
 }
 
 export default function Assistant() {

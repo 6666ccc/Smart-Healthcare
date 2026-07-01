@@ -29,10 +29,10 @@ public class ScheduleController {
         return Result.success(scheduleService.list(deptId, workDate, staffId));
     }
 
-    /** GET /api/schedules/{id} — 查询排班详情 */
+    /** GET /api/schedules/{id} — 查询排班详情（含科室、医生名称） */
     @GetMapping("/{id}")
-    public Result<Schedule> get(@PathVariable Long id) {
-        return Result.success(scheduleService.getById(id));
+    public Result<ScheduleVO> get(@PathVariable Long id) {
+        return Result.success(scheduleService.getDetail(id));
     }
 
     /** POST /api/schedules — 新建排班 */

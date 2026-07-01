@@ -15,6 +15,8 @@ public interface ScheduleMapper {
                                 @Param("workDate") LocalDate workDate,
                                 @Param("staffId") Long staffId);
 
+    ScheduleVO selectVOById(@Param("id") Long id);
+
     Schedule selectById(@Param("id") Long id);
 
     Schedule selectByIdForUpdate(@Param("id") Long id);

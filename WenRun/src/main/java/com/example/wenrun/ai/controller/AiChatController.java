@@ -3,9 +3,11 @@ package com.example.wenrun.ai.controller;
 import com.example.wenrun.ai.config.AiServiceProperties;
 import com.example.wenrun.ai.dto.ChatRequestDTO;
 import com.example.wenrun.ai.dto.JavaChatRequestDTO;
+import com.example.wenrun.ai.dto.JavaChatResumeRequestDTO;
 import com.example.wenrun.ai.exception.AiServiceException;
 import com.example.wenrun.ai.service.AiChatService;
 import com.example.wenrun.ai.vo.ChatResponseVO;
+import com.example.wenrun.ai.vo.JavaChatResponseVO;
 import com.example.wenrun.common.Result;
 import com.example.wenrun.config.JwtProperties;
 import com.example.wenrun.entity.ChatMessage;
@@ -110,13 +112,45 @@ public class AiChatController {
     }
 
     @PostMapping("/java/chat")
-    public Result<Map<String, Object>> javaChat(@RequestBody JavaChatRequestDTO dto, HttpServletRequest request) {
+    public Result<JavaChatResponseVO> javaChat(@RequestBody JavaChatRequestDTO dto, HttpServletRequest request) {
         enrichJavaChatContext(dto, resolveToken(request));
-        saveMessage(dto.getSessionId(), dto.getUserId() != null ? Long.parseLong(dto.getUserId()) : null, "user", dto.getContent());
-        Map<String, Object> result = aiChatService.javaChat(dto);
-        Object finalOutput = result.get("final_output");
-        if (finalOutput != null) saveMessage(dto.getSessionId(), dto.getUserId() != null ? Long.parseLong(dto.getUserId()) : null, "assistant", finalOutput.toString());
+        saveMessage(dto.getSessionId(), parseUserId(dto.getUserId()), "user", dto.getContent());
+        JavaChatResponseVO result = aiChatService.javaChat(dto);
+        saveJavaChatAssistantMessage(dto.getSessionId(), dto.getUserId(), result);
         return Result.success(result);
+    }
+
+    /**
+     * [HITL] 恢复被中断的 Java 集成聊天。
+     * <p>
+     * 当前端收到 {@code hitl_status=interrupt} 后，用户确认/拒绝/修改，调用此接口继续执行。
+     */
+    @PostMapping("/java/chat/resume")
+    public Result<JavaChatResponseVO> javaChatResume(
+            @Valid @RequestBody JavaChatResumeRequestDTO dto,
+            HttpServletRequest request) {
+        enrichJavaChatResumeContext(dto, resolveToken(request));
+        JavaChatResponseVO result = aiChatService.javaChatResume(dto);
+        saveJavaChatAssistantMessage(dto.getSessionId(), dto.getUserId(), result);
+        return Result.success(result);
+    }
+
+    private void saveJavaChatAssistantMessage(String sessionId, String userId, JavaChatResponseVO result) {
+        if (result == null || result.getFinalOutput() == null) {
+            return;
+        }
+        saveMessage(sessionId, parseUserId(userId), "assistant", result.getFinalOutput());
+    }
+
+    private Long parseUserId(String userId) {
+        if (!StringUtils.hasText(userId)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(userId.trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private void enrichJavaChatContext(JavaChatRequestDTO dto, String token) {
@@ -125,14 +159,32 @@ public class AiChatController {
             JWTClaimsSet claims = JwtUtil.verifyAndParse(token, jwtProperties.getSecret());
             Long userId = JwtUtil.getUserId(claims);
             if (userId != null) dto.setUserId(String.valueOf(userId));
-            Map<String, Object> extra = dto.getExtra();
-            if (extra == null) { extra = new java.util.HashMap<>(); dto.setExtra(extra); }
-            extra.put("access_token", token);
-            Long patientId = JwtUtil.getLongClaim(claims, "patient_id");
-            if (patientId != null) extra.put("patient_id", patientId);
-            Long staffId = JwtUtil.getLongClaim(claims, "staff_id");
-            if (staffId != null) extra.put("staff_id", staffId);
+            dto.setExtra(enrichExtraWithToken(dto.getExtra(), token, claims));
         } catch (Exception ignored) {}
+    }
+
+    /** [HITL] 为 resume 请求注入 userId 与 access_token */
+    private void enrichJavaChatResumeContext(JavaChatResumeRequestDTO dto, String token) {
+        if (!StringUtils.hasText(token)) return;
+        try {
+            JWTClaimsSet claims = JwtUtil.verifyAndParse(token, jwtProperties.getSecret());
+            Long userId = JwtUtil.getUserId(claims);
+            if (userId != null && !StringUtils.hasText(dto.getUserId())) {
+                dto.setUserId(String.valueOf(userId));
+            }
+            dto.setExtra(enrichExtraWithToken(dto.getExtra(), token, claims));
+        } catch (Exception ignored) {}
+    }
+
+    private Map<String, Object> enrichExtraWithToken(
+            Map<String, Object> extra, String token, JWTClaimsSet claims) {
+        Map<String, Object> resolved = extra != null ? extra : new java.util.HashMap<>();
+        resolved.put("access_token", token);
+        Long patientId = JwtUtil.getLongClaim(claims, "patient_id");
+        if (patientId != null) resolved.put("patient_id", patientId);
+        Long staffId = JwtUtil.getLongClaim(claims, "staff_id");
+        if (staffId != null) resolved.put("staff_id", staffId);
+        return resolved;
     }
 
     private void saveMessage(String conversationId, Long userId, String role, String content) {

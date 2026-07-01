@@ -1,23 +1,25 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.routes import api_router
 from app.core.logging import setup_logging
-from app.routers.java_intergration import router as java_router
+from app.memory import check_memory_health
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    """应用生命周期：启动时初始化日志，关闭时无需额外清理。"""
     setup_logging()
+    health = check_memory_health()
+    if health["ok"]:
+        logger.info("记忆服务就绪 | collection=%s", health["collection"])
+    else:
+        logger.warning("记忆服务不可用，将以无记忆模式运行")
     yield
 
 
 app = FastAPI(title="Wenrun AI", version="1.0.0", lifespan=lifespan)
-app.include_router(java_router)
-
-
-@app.get("/health")
-async def health() -> dict[str, str]:
-    """供 Java AiServiceClient.isHealthy() 探测。"""
-    return {"status": "ok"}
+app.include_router(api_router)
