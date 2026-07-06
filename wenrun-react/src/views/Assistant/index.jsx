@@ -2,8 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useIsPc } from '../../hooks'
-import { chat, chatResume } from '../../api'
-import HitlChoiceBar from './HitlChoiceBar'
+import { chat } from '../../api'
 import PcLayout from '../Home/pc/PcLayout'
 import MobileTabbar from '../Home/mobile/MobileTabbar'
 import { PageHeader, IconLogo } from '../shared'
@@ -51,9 +50,8 @@ function ChatWelcome({ onSuggest, isPc }) {
   )
 }
 
-function ChatMessage({ message, showAvatar, onHitlDecide, replying }) {
+function ChatMessage({ message, showAvatar }) {
   const isUser = message.role === 'user'
-  const showHitl = message.hitl?.status === 'interrupt' && !message.hitl?.resolved
 
   if (isUser) {
     return (
@@ -62,19 +60,6 @@ function ChatMessage({ message, showAvatar, onHitlDecide, replying }) {
         alignSelf: 'flex-end', maxWidth: '80%',
       }}>
         <div className="chat-bubble chat-bubble--user">{message.content}</div>
-      </div>
-    )
-  }
-
-  if (showHitl) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, width: '100%' }}>
-        {showAvatar && <div className="chat-avatar"><IconLogo size={16} /></div>}
-        <HitlChoiceBar
-          pendingActions={message.hitl.pendingActions}
-          disabled={replying}
-          onDecide={(type, extra) => onHitlDecide?.(message.id, type, extra)}
-        />
       </div>
     )
   }
@@ -110,7 +95,7 @@ function TypingIndicator({ showAvatar }) {
 }
 
 /* ==================== 移动端 ==================== */
-function AssistantMobile({ sessions, activeId, sendMessage, resolveHitl, newChat, selectSession, deleteSession, replying }) {
+function AssistantMobile({ sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying }) {
   const [input, setInput] = useState('')
   const chatEndRef = useRef(null)
   const active = sessions.find(s => s.id === activeId)
@@ -172,8 +157,6 @@ function AssistantMobile({ sessions, activeId, sendMessage, resolveHitl, newChat
                 key={m.id}
                 message={m}
                 showAvatar={false}
-                onHitlDecide={resolveHitl}
-                replying={replying}
               />
             ))}
             {replying && <TypingIndicator showAvatar={false} />}
@@ -211,7 +194,7 @@ function AssistantMobile({ sessions, activeId, sendMessage, resolveHitl, newChat
 }
 
 /* ==================== PC 端 ==================== */
-function AssistantPc({ sessions, activeId, sendMessage, resolveHitl, newChat, selectSession, deleteSession, replying }) {
+function AssistantPc({ sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying }) {
   const [input, setInput] = useState('')
   const chatEndRef = useRef(null)
   const active = sessions.find(s => s.id === activeId)
@@ -284,8 +267,6 @@ function AssistantPc({ sessions, activeId, sendMessage, resolveHitl, newChat, se
                     key={m.id}
                     message={m}
                     showAvatar
-                    onHitlDecide={resolveHitl}
-                    replying={replying}
                   />
                 ))}
                 {replying && <TypingIndicator showAvatar />}
@@ -341,32 +322,11 @@ function normalizeSessions(raw) {
 }
 
 function buildAssistantMessage(data) {
-  const msg = {
+  return {
     id: nextMsgId(),
     role: 'assistant',
     content: data?.final_output || data?.reply || '抱歉，暂时无法回复。',
   }
-  if (data?.hitl_status === 'interrupt') {
-    msg.hitl = {
-      status: 'interrupt',
-      pendingActions: data.hitl_pending_actions || [],
-      resolved: false,
-    }
-  }
-  return msg
-}
-
-function buildHitlDecisions(pendingActions, decisionType, extraMessage) {
-  const count = Math.max(pendingActions?.length || 0, 1)
-  return Array.from({ length: count }, () => {
-    if (decisionType === 'accept') {
-      return { type: 'approve' }
-    }
-    if (decisionType === 'append') {
-      return { type: 'reject', message: `用户补充说明：${extraMessage}` }
-    }
-    return { type: 'reject', message: '用户拒绝执行该操作' }
-  })
 }
 
 function useChat() {
@@ -439,64 +399,6 @@ function useChat() {
     }
   }
 
-  const resolveHitl = async (messageId, decisionType, extraMessage) => {
-    let currentId = activeId
-    if (!sessions.find(s => s.id === currentId)) {
-      currentId = sessions[0]?.id
-    }
-
-    const session = sessions.find(s => s.id === currentId)
-    const targetMsg = session?.messages?.find(m => m.id === messageId)
-    if (!targetMsg?.hitl || targetMsg.hitl.resolved) return
-
-    const pendingActions = targetMsg.hitl.pendingActions || []
-    const decisions = buildHitlDecisions(pendingActions, decisionType, extraMessage)
-
-    const decisionLabel = decisionType === 'accept'
-      ? '接受'
-      : decisionType === 'reject'
-        ? '拒绝'
-        : `追加信息：${extraMessage}`
-
-    setSessions(prev => prev.map(s => {
-      if (s.id !== currentId) return s
-      return {
-        ...s,
-        messages: [
-          ...s.messages.map(m =>
-            m.id === messageId
-              ? { ...m, hitl: { ...m.hitl, resolved: true, decision: decisionType } }
-              : m
-          ),
-          { id: nextMsgId(), role: 'user', content: decisionType === 'append' ? decisionLabel : `[${decisionLabel}]` },
-        ],
-      }
-    }))
-
-    setReplying(true)
-    try {
-      const data = await chatResume({
-        sessionId: currentId,
-        decisions,
-      })
-      const assistantMsg = buildAssistantMessage(data)
-      setSessions(prev =>
-        prev.map(s =>
-          s.id === currentId ? { ...s, messages: [...s.messages, assistantMsg] } : s
-        )
-      )
-    } catch (e) {
-      const errMsg = { id: nextMsgId(), role: 'assistant', content: `操作失败：${e.message}` }
-      setSessions(prev =>
-        prev.map(s =>
-          s.id === currentId ? { ...s, messages: [...s.messages, errMsg] } : s
-        )
-      )
-    } finally {
-      setReplying(false)
-    }
-  }
-
   const newChat = () => {
     const id = `session_${Date.now()}`
     setSessions(prev => [...prev, { id, title: '', messages: [] }])
@@ -514,7 +416,7 @@ function useChat() {
     })
   }
 
-  return { sessions, activeId, sendMessage, resolveHitl, newChat, selectSession, deleteSession, replying }
+  return { sessions, activeId, sendMessage, newChat, selectSession, deleteSession, replying }
 }
 
 export default function Assistant() {

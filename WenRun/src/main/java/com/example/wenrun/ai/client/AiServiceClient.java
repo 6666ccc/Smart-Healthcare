@@ -24,7 +24,7 @@ import java.util.Map;
 /**
  * AI 服务客户端，调用 Python FastAPI（/v1/chat 聊天、健康检查）。
  * <p>
- * Java 集成聊天（含 [HITL]）见 {@link JavaAiClient}。
+ * Java 集成聊天见 {@link JavaAiClient}。
  */
 @Slf4j
 @Component

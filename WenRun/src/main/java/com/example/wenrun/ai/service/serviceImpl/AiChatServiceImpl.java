@@ -5,7 +5,6 @@ import com.example.wenrun.ai.client.ChatStreamConsumer;
 import com.example.wenrun.ai.client.JavaAiClient;
 import com.example.wenrun.ai.dto.ChatRequestDTO;
 import com.example.wenrun.ai.dto.JavaChatRequestDTO;
-import com.example.wenrun.ai.dto.JavaChatResumeRequestDTO;
 import com.example.wenrun.ai.service.AiChatService;
 import com.example.wenrun.ai.vo.ChatResponseVO;
 import com.example.wenrun.ai.vo.JavaChatResponseVO;
@@ -32,10 +31,5 @@ public class AiChatServiceImpl implements AiChatService {
     @Override
     public JavaChatResponseVO javaChat(JavaChatRequestDTO dto) {
         return javaAiClient.chat(dto);
-    }
-
-    @Override
-    public JavaChatResponseVO javaChatResume(JavaChatResumeRequestDTO dto) {
-        return javaAiClient.resume(dto);
     }
 }

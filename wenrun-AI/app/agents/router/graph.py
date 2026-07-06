@@ -25,8 +25,9 @@ _builder.add_node("chat_agent", chat_agent)
 _builder.add_node("fallback", fallback)
 _builder.add_node("store_memory", store_memory)
 
-_builder.add_edge(START, "retrieve_memory")
-_builder.add_edge("retrieve_memory", "analyze_intent")
+
+_builder.add_edge(START, "retrieve_memory") #首先调用检索记忆节点
+_builder.add_edge("retrieve_memory", "analyze_intent") #然后调用分析意图节点(该节点内置一个LLM模型，用于分析用户意图)
 _builder.add_conditional_edges(
     "analyze_intent",
     decide_next_node,
@@ -47,9 +48,11 @@ _GRAPH = _builder.compile()
 
 
 class RouterGraph:
+    #用于初始化路由图
     def __init__(self, graph=_GRAPH):
-        self.graph = graph
+        self.graph = graph #将_GRAPH赋值给self.graph
 
+    #用于调用路由图
     def invoke(
         self,
         user_input: str,
@@ -69,10 +72,9 @@ class RouterGraph:
             reasoning=None,
             memory_context=None,
             final_output=None,
-            hitl_status=None,
-            hitl_thread_id=None,
-            hitl_pending_actions=None,
         )
+
+
         result = self.graph.invoke(initial)
 
         logger.info(

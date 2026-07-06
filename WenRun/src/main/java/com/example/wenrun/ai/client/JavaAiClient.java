@@ -2,7 +2,6 @@ package com.example.wenrun.ai.client;
 
 import com.example.wenrun.ai.config.AiServiceProperties;
 import com.example.wenrun.ai.dto.JavaChatRequestDTO;
-import com.example.wenrun.ai.dto.JavaChatResumeRequestDTO;
 import com.example.wenrun.ai.exception.AiServiceException;
 import com.example.wenrun.ai.vo.JavaChatResponseVO;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +15,6 @@ import org.springframework.web.client.RestClientException;
 
 /**
  * [Java 集成] 调用 Python FastAPI {@code /java/*} 接口的专用客户端。
- * <p>
- * 含 [HITL] 人工确认流程：chat → interrupt → resume。
  */
 @Slf4j
 @Component
@@ -33,30 +30,13 @@ public class JavaAiClient {
         this.properties = properties;
     }
 
-    /**
-     * 调用 {@code POST /java/chat}，走 LangGraph 路由 + Agent（写操作可能触发 [HITL] 中断）。
-     */
+    /** 调用 {@code POST /java/chat}，走 LangGraph 路由 + Agent。 */
     public JavaChatResponseVO chat(JavaChatRequestDTO request) {
         validateContent(request != null ? request.getContent() : null, "消息不能为空");
         request.setContent(request.getContent().trim());
 
         log.debug("[JavaAi] chat: POST {}{}", properties.getBaseUrl(), properties.getJavaChatPath());
         return postForJavaChatResponse(properties.getJavaChatPath(), request, "Java 集成聊天");
-    }
-
-    /**
-     * [HITL] 调用 {@code POST /java/chat/resume}，用户确认/拒绝/修改后恢复 Agent 执行。
-     */
-    public JavaChatResponseVO resume(JavaChatResumeRequestDTO request) {
-        if (request == null || !StringUtils.hasText(request.getSessionId())) {
-            throw new AiServiceException("[HITL] sessionId 不能为空");
-        }
-        if (request.getDecisions() == null || request.getDecisions().isEmpty()) {
-            throw new AiServiceException("[HITL] decisions 不能为空");
-        }
-
-        log.debug("[JavaAi][HITL] resume: POST {}{}", properties.getBaseUrl(), properties.getJavaChatResumePath());
-        return postForJavaChatResponse(properties.getJavaChatResumePath(), request, "[HITL] Java 集成聊天恢复");
     }
 
     private JavaChatResponseVO postForJavaChatResponse(String path, Object body, String actionLabel) {
@@ -75,11 +55,6 @@ public class JavaAiClient {
                     .body(JavaChatResponseVO.class);
             if (response == null) {
                 throw new AiServiceException(actionLabel + "返回为空");
-            }
-            if (response.isHitlInterrupt()) {
-                log.info("[JavaAi][HITL] 收到中断 | threadId={} actions={}",
-                        response.getHitlThreadId(),
-                        response.getHitlPendingActions() != null ? response.getHitlPendingActions().size() : 0);
             }
             return response;
         } catch (AiServiceException ex) {

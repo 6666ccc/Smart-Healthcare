@@ -46,8 +46,7 @@ def build_registration_system_prompt(memory_context: Optional[str]) -> str:
         "3. 缴费：list_pending_charges → get_charge_detail → pay_charge\n"
         "4. 查结果：get_visit_detail → list_prescriptions_by_visit / list_exam_requests_by_visit\n"
         "写操作（挂号、支付）前：先向用户展示关键信息摘要（科室、医生、日期、费用等），"
-        "然后直接调用对应工具；**不要**口头追问「是否确认」「确认挂号吗」等——"
-        "系统会自动弹出确认卡片，由患者在卡片上选择接受/拒绝/追加信息。"
+        "征得用户明确同意后再调用对应工具。"
     )
     if memory_context:
         base += f"\n\n## 用户历史信息\n{memory_context}"

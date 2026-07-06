@@ -24,9 +24,6 @@ public class AiServiceProperties {
     /** Java 集成聊天路径，对应 FastAPI POST /java/chat（LangGraph 路由图） */
     private String javaChatPath = "/java/chat";
 
-    /** [HITL] Java 集成聊天恢复路径，对应 FastAPI POST /java/chat/resume */
-    private String javaChatResumePath = "/java/chat/resume";
-
     /** 健康检查路径，对应 FastAPI GET /health */
     private String healthPath = "/health";
 

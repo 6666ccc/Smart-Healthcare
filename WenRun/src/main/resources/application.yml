@@ -23,7 +23,6 @@ ai:
     chat-path: /v1/chat
     chat-stream-path: /v1/chat/stream
     java-chat-path: /java/chat
-    java-chat-resume-path: /java/chat/resume
     health-path: /health
     connect-timeout: 5s
     read-timeout: 120s
