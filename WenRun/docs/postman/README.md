@@ -31,7 +31,7 @@
 |------|------|
 | baseUrl | 后端根地址 |
 | token | 登录后自动写入 |
-| patientId / scheduleId / registrationId / visitId 等 | 答辩演示时手动填入上一步返回的 ID |
+| patientId / scheduleId / registrationId / visitId 等 | 项目演示时手动填入上一步返回的 ID |
 
 ## AI 接口
 
