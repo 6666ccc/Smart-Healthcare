@@ -151,7 +151,7 @@ async def java_chat_resume(
         raise HTTPException(status_code=400, detail="decision 不能为空")
 
     # resume 期间工具 Agent 可能继续调用 Java 业务接口，所以也需要临时注入 token。
-    access_token = _extract_access_token(http_request)
+    access_token = _extract_access_token(http_request, request.extra)
     set_patient_token(access_token)
 
     try:

@@ -46,4 +46,7 @@ class JavaHitlResumeRequest(BaseModel):
     # 示例：{"type": "approve"}、{"type": "reject", "message": "..."}。
     decision: dict[str, Any]
 
+    # resume 后才会真正执行工具，仍然需要携带患者 access_token。
+    extra: dict[str, Any] | None = None
+
     model_config = ConfigDict(populate_by_name=True)

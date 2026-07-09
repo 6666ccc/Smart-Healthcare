@@ -6,6 +6,7 @@ from langgraph.types import Command
 
 from langchain_core.runnables import RunnableConfig
 
+from app.agents.router.hitl import build_hitl_config, normalize_session_id
 from app.agents.router.nodes import (
     analyze_intent,
     chat_agent,
@@ -117,13 +118,13 @@ class RouterGraph:
         """
         logger.info("路由图开始 | user_input=%r user_id=%s", user_input, user_id)
 
-        thread_id = session_id or "unknown"
+        thread_id = normalize_session_id(session_id)
 
         initial = RouterState(
             messages=[],
             user_input=user_input,
             user_id=user_id,
-            session_id=session_id,
+            session_id=thread_id,
             intent=None,
             status=None,
             interrupts=None,
@@ -137,7 +138,7 @@ class RouterGraph:
 
         # 第 1 步：把会话 ID 交给 LangGraph checkpointer。
         # 之后 resume 必须使用同一个 thread_id，才能找到这次 invoke 暂停时的状态。
-        config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+        config: RunnableConfig = build_hitl_config(thread_id)
         result = self.graph.invoke(initial, config=config)
 
         logger.info(
@@ -162,11 +163,20 @@ class RouterGraph:
 
         输出：恢复后的 RouterState dict；多轮 HITL 时仍可能返回 status=pending。
         """
-        thread_id = session_id or "unknown"
-        config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+        if not session_id:
+            raise ValueError("session_id 不能为空")
 
-        logger.info("HITL 恢复 | session_id=%s decision_type=%s",
-                     thread_id, decision.get("type"))
+        thread_id = session_id.strip()
+        if not thread_id:
+            raise ValueError("session_id 不能为空")
+
+        config: RunnableConfig = build_hitl_config(thread_id)
+
+        logger.info(
+            "HITL 恢复 | session_id=%s decision_type=%s",
+            thread_id,
+            decision.get("type"),
+        )
 
         result = self.graph.invoke(Command(resume=decision), config=config)
 

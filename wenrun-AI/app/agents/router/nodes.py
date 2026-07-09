@@ -2,14 +2,20 @@ import json
 import logging
 import re
 
-from typing import Any
-
 from app.tools import PATIENT_ALL_TOOLS
 from langchain.agents import create_agent
 from langchain.agents.middleware import HumanInTheLoopMiddleware
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.agents.llm import MODEL
+from app.agents.router.hitl import (
+    HITL_TOOL_POLICIES,
+    build_hitl_config,
+    extract_interrupt_dicts,
+    extract_messages_from_result,
+    format_hitl_decision,
+    format_interrupts,
+)
 from app.agents.router.prompts import (
     build_chat_system_prompt,
     build_intent_prompt,
@@ -32,12 +38,7 @@ TOOL_AGENT = create_agent(
     tools=PATIENT_ALL_TOOLS,
     middleware=[
         HumanInTheLoopMiddleware(
-            interrupt_on={
-                "create_registration": {
-                    "allowed_decisions": ["approve", "reject", "respond"],
-                    "description": "创建挂号预约",
-                },
-            }
+            interrupt_on=HITL_TOOL_POLICIES,
         )
     ],
     checkpointer=InMemorySaver(),
@@ -191,173 +192,6 @@ def chat_agent(state: RouterState) -> dict:
     return _run_chat(prompt, state["user_input"])
 
 
-# 工具名 → 展示信息的映射表
-_TOOL_DISPLAY: dict[str, dict[str, Any]] = {
-    "create_registration": {
-        "title": "挂号确认",
-        "labels": {
-            "patient_id": "患者ID",
-            "schedule_id": "排班ID",
-        },
-    },
-    "cancel_registration": {
-        "title": "取消挂号确认",
-        "labels": {
-            "registration_id": "挂号单ID",
-        },
-    },
-    "pay_charge": {
-        "title": "缴费确认",
-        "labels": {
-            "charge_id": "费用ID",
-        },
-    },
-}
-
-
-def _format_interrupts(interrupts: list) -> list:
-    """将 HITL 原始请求 dict 展开为前端可展示的待确认操作列表。
-
-    输入：[{"action_requests": [...], "review_configs": [...]}, ...]
-         来自 _extract_interrupt_dicts，即 LangGraph Interrupt.value 解包结果
-    输出：[{"tool", "args", "title", "summary", "details", "allowed_decisions", ...}, ...]
-         供 POST /java/chat 的 interrupts 字段返回给前端
-    """
-    formatted: list[dict] = []
-    for item in interrupts:
-        if not isinstance(item, dict):
-            continue
-
-        action_requests: list[dict] = item.get("action_requests", [])
-        review_configs: list[dict] = item.get("review_configs", [])
-
-        # 第 1 步：按 action_name 建立 review_config 索引。
-        # action_requests 里是“要执行什么工具”，review_configs 里是“这个工具允许哪些决策”。
-        config_by_action: dict[str, dict] = {
-            rc.get("action_name", ""): rc for rc in review_configs
-        }
-
-        for action_req in action_requests:
-            tool_name: str = action_req.get("name", "")
-            tool_args = action_req.get("arguments", {})
-            if not tool_args:
-                tool_args = action_req.get("args", {})
-            description: str = action_req.get("description", "")
-
-            review: dict[str, Any] = config_by_action.get(tool_name, {})
-            allowed_decisions: list[str] = review.get(
-                "allowed_decisions", ["approve", "reject", "respond"]
-            )
-
-            # 第 2 步：把内部工具名转换成前端更容易看懂的标题和字段标签。
-            # 无匹配配置时回退到原始工具名，避免新工具没有配置时整个接口失败。
-            display: dict[str, Any] = _TOOL_DISPLAY.get(tool_name, {})
-            title: str = display.get("title", tool_name)
-            labels: dict[str, str] = display.get("labels", {})
-
-            # 第 3 步：把工具参数转成详情行。
-            # 输入是 {"patient_id": 1}，输出是 [{"label": "患者ID", "value": "1"}]。
-            details: list[dict[str, str]] = [
-                {"label": str(labels.get(k, k)), "value": str(v)}
-                for k, v in tool_args.items()
-            ]
-
-            # 第 4 步：生成一行摘要，供前端列表或弹窗标题附近快速展示。
-            if description:
-                summary = description
-            else:
-                summary = " · ".join(
-                    f"{labels.get(k, k)}: {v}" for k, v in tool_args.items()
-                )
-
-            formatted.append(
-                {
-                    "tool": tool_name,
-                    "args": tool_args,
-                    "description": description,
-                    "allowed_decisions": allowed_decisions,
-                    "title": title,
-                    "summary": summary,
-                    "details": details,
-                }
-            )
-
-    return formatted
-
-
-def _format_hitl_data(data: dict) -> dict:
-    """将前端 POST /java/chat/resume 的 decision 转为 HITL 中间件 resume 载荷。
-
-    输入：{"type": "approve"|"reject"|"respond"|"edit", "tool"?, "args"?, "message"?}
-    输出：{"decisions": [{...}]}，可直接传入 Command(resume=...)
-    """
-    # 第 1 步：从前端 decision 中取出用户选择。
-    # 默认 approve 是为了兼容只传空 dict 的旧调用，但正常前端应该显式传 type。
-    decision_type = data.get("type", "approve")
-    message = data.get("message", "")
-    tool_name = data.get("tool", "")
-    tool_args = data.get("args", {})
-
-    decision: dict = {"type": decision_type}
-
-    # 第 2 步：LangChain HITL 中间件要求 resume 载荷形如 {"decisions": [...]}。
-    # edit 需要 edited_action；reject/respond 可以附带 message 给模型解释原因。
-    if decision_type == "edit":
-        decision["edited_action"] = {
-            "name": tool_name or data.get("edited_action", {}).get("name", ""),
-            "args": tool_args or data.get("edited_action", {}).get("args", {}),
-        }
-    elif decision_type in ("reject", "respond"):
-        if message:
-            decision["message"] = message
-
-    return {"decisions": [decision]}
-
-def _extract_messages_from_result(result) -> list:
-    """从 TOOL_AGENT.invoke(version="v2") 的 GraphOutput 中取出 messages 列表。
-
-    输入：GraphOutput（消息可能在 .value[\"messages\"] 或 .messages）
-    输出：LangChain Message 列表；取不到时返回 []
-    """
-    # LangGraph v2 的返回值可能把消息放在 result.value["messages"]。
-    value = getattr(result, "value", None)
-    if isinstance(value, dict):
-        messages = value.get("messages")
-        if messages is not None:
-            return messages
-
-    # 某些返回对象也可能直接暴露 .messages，这里做一层兼容。
-    messages = getattr(result, "messages", None)
-    if messages is not None:
-        return messages
-    return []
-
-
-def _extract_interrupt_dicts(result) -> list[dict]:
-    """把 LangGraph / HITL 返回的 Interrupt 对象解包为普通 dict 列表。
-
-    输入：TOOL_AGENT.invoke(version="v2") 的 GraphOutput，含 .interrupts
-    输出：[{"action_requests": [...], "review_configs": [...]}, ...]
-    供 _format_interrupts 转成前端字段 title / summary / details
-    """
-    # 第 1 步：读取 GraphOutput.interrupts；没有中断时统一当空列表处理。
-    raw_interrupts = getattr(result, "interrupts", None)
-    if raw_interrupts is None:
-        raw_interrupts = []
-
-    # 第 2 步：Interrupt 对象的真实数据通常在 .value 里。
-    # _format_interrupts 只认识普通 dict，所以这里把对象解包成 dict 列表。
-    items = []
-    for item in raw_interrupts:
-        if hasattr(item, "value"):
-            value = item.value
-        else:
-            value = item
-        if isinstance(value, dict):
-            items.append(value)
-    return items
-
-
 def registration_agent(state: RouterState) -> dict:
     """路由图节点：调用带 HITL 的 TOOL_AGENT，检测是否需要人工确认。
 
@@ -368,11 +202,7 @@ def registration_agent(state: RouterState) -> dict:
     """
     # 第 1 步：工具 Agent 也使用同一个 session_id 作为 thread_id。
     # 这样主图和工具 Agent 的 checkpoint 都能按会话隔离。
-    config: RunnableConfig = {
-        "configurable": {
-            "thread_id": state.get("session_id") or "unknown",
-        }
-    }
+    config: RunnableConfig = build_hitl_config(state["session_id"])
 
     # 第 2 步：把用户输入交给带 HITL 中间件的工具 Agent。
     # version="v2" 的返回值中可能包含 interrupts。
@@ -383,8 +213,8 @@ def registration_agent(state: RouterState) -> dict:
     )
 
     # 第 3 步：把 LangGraph 的 Interrupt 对象整理成前端可展示的 JSON。
-    interrupt_dicts = _extract_interrupt_dicts(result)
-    formatted_interrupts = _format_interrupts(interrupt_dicts)
+    interrupt_dicts = extract_interrupt_dicts(result)
+    formatted_interrupts = format_interrupts(interrupt_dicts)
 
     if len(formatted_interrupts) > 0:
         # 第 4A 步：有中断时，主图不能继续执行工具。
@@ -397,11 +227,18 @@ def registration_agent(state: RouterState) -> dict:
         }
 
     # 第 4B 步：没有中断时，取最后一条消息作为最终回复。
-    messages = _extract_messages_from_result(result)
-    last_message = messages[-1] if len(messages) > 0 else None
+    messages = extract_messages_from_result(result)
+    last_message = None
+    if len(messages) > 0:
+        last_message = messages[-1]
+
+    final_output = ""
+    if last_message is not None:
+        final_output = _message_text(last_message)
+
     return {
         "messages": messages,
-        "final_output": _message_text(last_message) if last_message else "",
+        "final_output": final_output,
         "status": "completed",
         "interrupts": [],
         "_pending_interrupts": [],
@@ -422,11 +259,7 @@ def handle_tool_hitl(state: RouterState) -> dict:
     if not pending:
         return {"status": "completed", "_pending_interrupts": []}
 
-    config: RunnableConfig = {
-        "configurable": {
-            "thread_id": state.get("session_id") or "unknown",
-        }
-    }
+    config: RunnableConfig = build_hitl_config(state["session_id"])
 
     # 第 1 步：暂停主图，等待前端提交 decision。
     # 首次执行：LangGraph 在这里暂停，将 state 写入 checkpointer。
@@ -434,7 +267,7 @@ def handle_tool_hitl(state: RouterState) -> dict:
     decision = interrupt({"interrupts": pending})
 
     # 第 2 步：把前端 decision 转成 HITL 中间件能识别的 resume 载荷，然后恢复工具 Agent。
-    resume_payload = _format_hitl_data(decision)
+    resume_payload = format_hitl_decision(decision)
     result = TOOL_AGENT.invoke(
         Command(resume=resume_payload),
         config=config,
@@ -443,9 +276,9 @@ def handle_tool_hitl(state: RouterState) -> dict:
 
     # 第 3 步：检查工具 Agent 是否又产生新一轮中断。
     # 例如一次对话里连续触发多个需要确认的业务操作。
-    more_interrupts = _extract_interrupt_dicts(result)
+    more_interrupts = extract_interrupt_dicts(result)
     if more_interrupts:
-        formatted_more = _format_interrupts(more_interrupts)
+        formatted_more = format_interrupts(more_interrupts)
         return {
             "_pending_interrupts": formatted_more,
             "interrupts": formatted_more,
@@ -454,11 +287,18 @@ def handle_tool_hitl(state: RouterState) -> dict:
         }
 
     # 第 4 步：全部工具确认完成后，取最后一条消息作为最终输出。
-    messages = _extract_messages_from_result(result)
-    last_message = messages[-1] if len(messages) > 0 else None
+    messages = extract_messages_from_result(result)
+    last_message = None
+    if len(messages) > 0:
+        last_message = messages[-1]
+
+    final_output = ""
+    if last_message is not None:
+        final_output = _message_text(last_message)
+
     return {
         "messages": messages,
-        "final_output": _message_text(last_message) if last_message else "",
+        "final_output": final_output,
         "status": "completed",
         "interrupts": [],
         "_pending_interrupts": [],
@@ -471,52 +311,10 @@ def check_pending_interrupts(state: RouterState) -> str:
     返回 "handle_tool_hitl" 进入中断等待；返回 "store_memory" 进入记忆存储并结束。
     """
     pending = state.get("_pending_interrupts") or []
-    return "handle_tool_hitl" if len(pending) > 0 else "store_memory"
+    if len(pending) > 0:
+        return "handle_tool_hitl"
 
-
-def resume_tool_agent(session_id: str, hitl_decision: dict) -> dict:
-    """[Legacy] 直接恢复 TOOL_AGENT，绕过主图的 HITL 节点。
-
-    新代码请优先使用 RouterGraph.resume(session_id, decision)，它会通过主图的
-    handle_tool_hitl → checkpointer → Command(resume=...) 标准流程恢复执行，
-    确保 store_memory 等后续节点也能正常触发。
-
-    输入：session_id（与首次 invoke 的 thread_id 一致），hitl_decision（前端 decision）
-    输出：与 registration_agent 相同；可能再次 pending，或 completed + final_output
-    """
-    config: RunnableConfig = {
-        "configurable": {
-            "thread_id": session_id or "unknown",
-        }
-    }
-
-    # _format_hitl_data 已返回 {"decisions": [...]}，可直接放进 Command(resume=...)。
-    resume_payload = _format_hitl_data(hitl_decision)
-    result = TOOL_AGENT.invoke(
-        Command(resume=resume_payload),
-        config=config,
-        version="v2",
-    )
-
-    interrupt_dicts = _extract_interrupt_dicts(result)
-    formatted_interrupts = _format_interrupts(interrupt_dicts)
-
-    if len(formatted_interrupts) > 0:
-        return {
-            "interrupts": formatted_interrupts,
-            "status": "pending",
-            "final_output": None,
-            "session_id": session_id,
-        }
-
-    messages = _extract_messages_from_result(result)  # 兼容 v2 GraphOutput 的消息位置。
-    last_message = messages[len(messages) - 1] if len(messages) > 0 else None
-    return {
-        "interrupts": [],
-        "status": "completed",
-        "final_output": _message_text(last_message) if last_message else "",
-        "session_id": session_id,
-    }
+    return "store_memory"
 
 
 def fallback(state: RouterState) -> dict:
