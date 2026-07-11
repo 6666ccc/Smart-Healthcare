@@ -14,6 +14,8 @@ public interface ChargeOrderMapper {
 
     ChargeOrder selectById(@Param("id") Long id);
 
+    ChargeOrderVO selectVoById(@Param("id") Long id);
+
     int insert(ChargeOrder order);
 
     int updatePay(ChargeOrder order);

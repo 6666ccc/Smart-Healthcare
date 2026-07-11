@@ -43,21 +43,15 @@ public class RegistrationServiceImpl implements RegistrationService {
      */
     @Override
     public List<RegistrationVO> list(Long patientId, Long userId, Long registrantUserId, Long staffId, Integer status) {
-        List<RegistrationVO> registrationVOList = registrationMapper.selectList(
-                patientId, userId, registrantUserId, staffId, status);
-
-        LocalDate today = LocalDate.now();
-        LocalTime nowTime = LocalTime.now();
-        for (RegistrationVO registrationVO : registrationVOList) {
-            if (registrationVO.getStatus() == null || registrationVO.getStatus() != BizStatus.REG_REGISTERED) {
-                continue;
-            }
-            if (isExpired(registrationVO.getWorkDate(), registrationVO.getTimePeriod(), today, nowTime)) {
-                registrationVO.setStatus(BizStatus.REG_CANCELLED);
-                registrationMapper.updateStatus(registrationVO.getId(), BizStatus.REG_CANCELLED);
-            }
+        if (AccountType.PATIENT.equals(UserContext.getAccountType())) {
+            Patient patient = patientMapper.selectByUserId(UserContext.getUserId());
+            if (patient == null) throw new BusinessException("Patient profile not found");
+            patientId = patient.getId();
+            userId = null;
+            registrantUserId = null;
+            staffId = null;
         }
-        return registrationVOList;
+        return registrationMapper.selectList(patientId, userId, registrantUserId, staffId, status);
     }
 
     /**
@@ -116,6 +110,12 @@ public class RegistrationServiceImpl implements RegistrationService {
         Registration reg = registrationMapper.selectById(id);
         if (reg == null) {
             throw new BusinessException("挂号单不存在");
+        }
+        if (AccountType.PATIENT.equals(UserContext.getAccountType())) {
+            Patient patient = patientMapper.selectByUserId(UserContext.getUserId());
+            if (patient == null || !reg.getPatientId().equals(patient.getId())) {
+                throw new BusinessException("Access denied");
+            }
         }
         if (reg.getStatus() == BizStatus.REG_CANCELLED) {
             throw new BusinessException("挂号单已退号");

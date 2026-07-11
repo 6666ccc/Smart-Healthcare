@@ -2,6 +2,7 @@ package com.example.wenrun.service.impl;
 
 import com.example.wenrun.common.constant.BizStatus;
 import com.example.wenrun.common.context.UserContext;
+import com.example.wenrun.common.constant.AccountType;
 import com.example.wenrun.common.exception.BusinessException;
 import com.example.wenrun.common.util.BizNoUtil;
 import com.example.wenrun.dto.ChargePayDTO;
@@ -19,6 +20,8 @@ import com.example.wenrun.mapper.MedicalItemMapper;
 import com.example.wenrun.mapper.OutpatientVisitMapper;
 import com.example.wenrun.mapper.PrescriptionMapper;
 import com.example.wenrun.mapper.RegistrationMapper;
+import com.example.wenrun.mapper.PatientMapper;
+import com.example.wenrun.entity.Patient;
 import com.example.wenrun.service.ChargeService;
 import com.example.wenrun.vo.ChargeOrderVO;
 import lombok.RequiredArgsConstructor;
@@ -44,10 +47,14 @@ public class ChargeServiceImpl implements ChargeService {
     private final PrescriptionMapper prescriptionMapper;
     private final ExamRequestMapper examRequestMapper;
     private final MedicalItemMapper medicalItemMapper;
+    private final PatientMapper patientMapper;
 
     /** 按支付状态与患者查询收费单列表 */
     @Override
     public List<ChargeOrderVO> list(Integer payStatus, Long patientId) {
+        if (isPatientAccount()) {
+            return chargeOrderMapper.selectList(payStatus, currentPatientId());
+        }
         return chargeOrderMapper.selectList(payStatus, patientId);
     }
 
@@ -58,19 +65,11 @@ public class ChargeServiceImpl implements ChargeService {
         if (order == null) {
             throw new BusinessException("收费单不存在");
         }
-        ChargeOrderVO vo = chargeOrderMapper.selectList(null, null).stream()
-                .filter(o -> o.getId().equals(id)).findFirst()
-                .orElse(new ChargeOrderVO());
-        vo.setId(order.getId());
-        vo.setOrderNo(order.getOrderNo());
-        vo.setPatientId(order.getPatientId());
-        vo.setVisitId(order.getVisitId());
-        vo.setTotalAmount(order.getTotalAmount());
-        vo.setPaidAmount(order.getPaidAmount());
-        vo.setPayType(order.getPayType());
-        vo.setPayStatus(order.getPayStatus());
-        vo.setPayTime(order.getPayTime());
-        vo.setCreateTime(order.getCreateTime());
+        assertOrderOwnership(order);
+        ChargeOrderVO vo = chargeOrderMapper.selectVoById(id);
+        if (vo == null) {
+            throw new BusinessException("Charge order not found");
+        }
         vo.setDetails(chargeDetailMapper.selectByOrderId(id));
         return vo;
     }
@@ -154,7 +153,11 @@ public class ChargeServiceImpl implements ChargeService {
         if (order.getPayStatus() != BizStatus.PAY_PENDING) {
             throw new BusinessException("收费单状态不允许支付");
         }
-        BigDecimal paid = dto.getPaidAmount() != null ? dto.getPaidAmount() : order.getTotalAmount();
+        assertOrderOwnership(order);
+        BigDecimal paid = dto.getPaidAmount();
+        if (paid == null || paid.compareTo(BigDecimal.ZERO) <= 0 || paid.compareTo(order.getTotalAmount()) != 0) {
+            throw new BusinessException("Invalid payment amount");
+        }
         order.setPaidAmount(paid);
         order.setPayType(dto.getPayType());
         order.setPayStatus(BizStatus.PAY_PAID);
@@ -169,6 +172,22 @@ public class ChargeServiceImpl implements ChargeService {
             } else if (d.getBizType() == BizStatus.CHARGE_EXAM) {
                 examRequestMapper.updateStatus(d.getBizId(), BizStatus.EXAM_PAID);
             }
+        }
+    }
+
+    private boolean isPatientAccount() {
+        return AccountType.PATIENT.equals(UserContext.getAccountType());
+    }
+
+    private Long currentPatientId() {
+        Patient patient = patientMapper.selectByUserId(UserContext.getUserId());
+        if (patient == null) throw new BusinessException("Patient profile not found");
+        return patient.getId();
+    }
+
+    private void assertOrderOwnership(ChargeOrder order) {
+        if (isPatientAccount() && !order.getPatientId().equals(currentPatientId())) {
+            throw new BusinessException("Access denied");
         }
     }
 }

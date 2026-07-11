@@ -1,6 +1,8 @@
 package com.example.wenrun.service.impl;
 
 import com.example.wenrun.common.exception.BusinessException;
+import com.example.wenrun.common.constant.AccountType;
+import com.example.wenrun.common.context.UserContext;
 import com.example.wenrun.common.util.BizNoUtil;
 import org.springframework.util.StringUtils;
 import com.example.wenrun.dto.PatientQueryDTO;
@@ -26,6 +28,10 @@ public class PatientServiceImpl implements PatientService {
     /** 按条件查询患者列表 */
     @Override
     public List<PatientVO> list(PatientQueryDTO query) {
+        if (isPatientAccount()) {
+            Patient patient = patientMapper.selectByUserId(UserContext.getUserId());
+            return patient == null ? List.of() : List.of(toVo(patient));
+        }
         return patientMapper.selectByCondition(query).stream()
                 .map(this::toVo)
                 .toList();
@@ -38,6 +44,7 @@ public class PatientServiceImpl implements PatientService {
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
+        assertPatientOwnership(patient);
         return toVo(patient);
     }
 
@@ -57,10 +64,22 @@ public class PatientServiceImpl implements PatientService {
         if (patient.getId() == null) {
             throw new BusinessException("患者ID不能为空");
         }
-        if (patientMapper.selectById(patient.getId()) == null) {
+        Patient existing = patientMapper.selectById(patient.getId());
+        if (existing == null) {
             throw new BusinessException("患者不存在");
         }
+        assertPatientOwnership(existing);
         patientMapper.updateById(patient);
+    }
+
+    private boolean isPatientAccount() {
+        return AccountType.PATIENT.equals(UserContext.getAccountType());
+    }
+
+    private void assertPatientOwnership(Patient patient) {
+        if (isPatientAccount() && !UserContext.getUserId().equals(patient.getUserId())) {
+            throw new BusinessException("Access denied");
+        }
     }
 
     private PatientVO toVo(Patient patient) {

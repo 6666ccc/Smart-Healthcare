@@ -21,6 +21,9 @@
     <update id="updateStatus">
         UPDATE prescription SET status = #{status} WHERE id = #{id}
     </update>
+    <update id="updateStatusIfCurrent">
+        UPDATE prescription SET status = #{toStatus} WHERE id = #{id} AND status = #{fromStatus}
+    </update>
     <update id="updateStatusByVisitId">
         UPDATE prescription SET status = #{toStatus}
         WHERE visit_id = #{visitId} AND status = #{fromStatus}
