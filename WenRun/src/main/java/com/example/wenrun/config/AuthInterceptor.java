@@ -82,6 +82,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         String accountType = JwtUtil.getStringClaim(claims, "account_type");
         assertAccountTypeAllowed(request.getRequestURI(), accountType);
         UserContext.setUserId(JwtUtil.getUserId(claims));
+        UserContext.setAccountType(accountType);
         return true;
     }
 

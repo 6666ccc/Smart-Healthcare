@@ -45,6 +45,9 @@ public class DispenseServiceImpl implements DispenseService {
         if (dispenseRecordMapper.selectByPrescriptionId(prescriptionId) != null) {
             throw new BusinessException("处方已发药");
         }
+        if (prescriptionMapper.updateStatusIfCurrent(prescriptionId, BizStatus.RX_PAID, BizStatus.RX_DISPENSED) == 0) {
+            throw new BusinessException("Prescription already dispensed");
+        }
         List<PrescriptionItem> items = prescriptionItemMapper.selectByPrescriptionId(prescriptionId);
         for (PrescriptionItem item : items) {
             DrugStock stock = drugStockMapper.selectByDrugIdForUpdate(item.getDrugId());
@@ -62,6 +65,5 @@ public class DispenseServiceImpl implements DispenseService {
         record.setDispenseTime(LocalDateTime.now());
         record.setStatus(BizStatus.ENABLED);
         dispenseRecordMapper.insert(record);
-        prescriptionMapper.updateStatus(prescriptionId, BizStatus.RX_DISPENSED);
     }
 }

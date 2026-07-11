@@ -21,6 +21,9 @@ public interface PrescriptionMapper {
 
     int updateStatus(@Param("id") Long id, @Param("status") Integer status);
 
+    int updateStatusIfCurrent(@Param("id") Long id, @Param("fromStatus") Integer fromStatus,
+                              @Param("toStatus") Integer toStatus);
+
     int updateStatusByVisitId(@Param("visitId") Long visitId,
                               @Param("fromStatus") Integer fromStatus,
                               @Param("toStatus") Integer toStatus);
