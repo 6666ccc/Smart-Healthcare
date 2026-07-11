@@ -37,6 +37,7 @@ lerna-debug.log*
 application-local.yml
 **/application-local.yml
 .cursor/
+.worktrees/
 # ===== IDE & Editor =====
 .idea/
 .vscode/
