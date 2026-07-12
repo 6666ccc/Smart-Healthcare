@@ -18,22 +18,12 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import java.util.List;
 import java.util.regex.Pattern;
 
-/**
- * 认证拦截器 —— 拦截 /api/** 请求。
- *
- * <h3>认证方式</h3>
- * <ol>
- *   <li><b>API Key</b>：请求头 X-API-Key → 服务间调用</li>
- *   <li><b>JWT</b>：请求头 Authorization: Bearer / X-Token → 用户登录</li>
- * </ol>
- */
 @Component
 @RequiredArgsConstructor
 public class AuthInterceptor implements HandlerInterceptor {
 
     private static final List<String> STAFF_TYPES = List.of(AccountType.STAFF, AccountType.INTERNAL);
     private static final List<String> STAFF_AND_PATIENT = List.of(AccountType.STAFF, AccountType.INTERNAL, AccountType.PATIENT);
-
     private static final List<PathRule> RULES = List.of(
             new PathRule("/api/auth/logout", null, STAFF_AND_PATIENT),
             new PathRule("/api/ai", null, STAFF_AND_PATIENT),
@@ -59,8 +49,8 @@ public class AuthInterceptor implements HandlerInterceptor {
             new PathRule("/api/patients", null, STAFF_AND_PATIENT),
             new PathRule("/api/user/profile", "PUT", STAFF_AND_PATIENT)
     );
-
     private static final Pattern CHARGE_PAY = Pattern.compile("^/api/charges/\\d+/pay$");
+    private static final String FORBIDDEN_MESSAGE = "无权限访问该资源";
 
     private final JwtProperties jwtProperties;
     private final ApiKeyProperties apiKeyProperties;
@@ -70,31 +60,26 @@ public class AuthInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
 
-        // ===== API Key 认证（服务间调用） =====
         String apiKey = request.getHeader("X-API-Key");
         if (StringUtils.hasText(apiKey) && apiKey.equals(apiKeyProperties.getApiKey())) {
             if (resolveAllowed(request.getRequestURI(), request.getMethod()).isEmpty()) {
-                throw new BusinessException(ResultCode.FORBIDDEN, "无权限访问该资源");
+                throw new BusinessException(ResultCode.FORBIDDEN, FORBIDDEN_MESSAGE);
             }
             ClientContext.set("api-service", "*");
             return true;
         }
 
-        // ===== JWT 认证（用户登录） =====
         String token = resolveToken(request);
         if (!StringUtils.hasText(token)) {
-            throw new BusinessException(ResultCode.UNAUTHORIZED, "未登录或 Token 无效");
+            throw new BusinessException(ResultCode.UNAUTHORIZED, "\u672a\u767b\u5f55\u6216 Token \u65e0\u6548");
         }
 
         JWTClaimsSet claims = JwtUtil.verifyAndParse(token, jwtProperties.getSecret());
-
-        // 检查黑名单（登出后的 Token）
         String jti = JwtUtil.getJti(claims);
         if (jti != null && blacklistMapper.existsByJti(jti) > 0) {
-            throw new BusinessException(ResultCode.UNAUTHORIZED, "Token 已失效");
+            throw new BusinessException(ResultCode.UNAUTHORIZED, "Token \u5df2\u5931\u6548");
         }
 
-        // 角色校验
         String accountType = JwtUtil.getStringClaim(claims, "account_type");
         assertAccountTypeAllowed(request.getRequestURI(), request.getMethod(), accountType);
         UserContext.setUserId(JwtUtil.getUserId(claims));
@@ -105,7 +90,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     private void assertAccountTypeAllowed(String path, String method, String accountType) {
         List<String> allowed = resolveAllowed(path, method);
         if (!StringUtils.hasText(accountType) || !allowed.contains(accountType)) {
-            throw new BusinessException(ResultCode.FORBIDDEN, "无权限访问该资源");
+            throw new BusinessException(ResultCode.FORBIDDEN, FORBIDDEN_MESSAGE);
         }
     }
 
@@ -113,11 +98,8 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (CHARGE_PAY.matcher(path).matches()) {
             return "POST".equalsIgnoreCase(method) ? List.of(AccountType.PATIENT) : List.of();
         }
-        return RULES.stream()
-                .filter(r -> r.matches(path, method))
-                .findFirst()
-                .map(PathRule::allowed)
-                .orElse(List.of());
+        return RULES.stream().filter(rule -> rule.matches(path, method)).findFirst()
+                .map(PathRule::allowed).orElse(List.of());
     }
 
     private record PathRule(String prefix, String method, List<String> allowed) {
