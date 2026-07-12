@@ -36,6 +36,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private static final List<PathRule> RULES = List.of(
             new PathRule("/api/auth/logout", null, STAFF_AND_PATIENT),
+            new PathRule("/api/ai", null, STAFF_AND_PATIENT),
             new PathRule("/api/visits", null, STAFF_TYPES),
             new PathRule("/api/exam-requests", null, STAFF_TYPES),
             new PathRule("/api/drug-stocks", null, STAFF_TYPES),
@@ -72,6 +73,9 @@ public class AuthInterceptor implements HandlerInterceptor {
         // ===== API Key 认证（服务间调用） =====
         String apiKey = request.getHeader("X-API-Key");
         if (StringUtils.hasText(apiKey) && apiKey.equals(apiKeyProperties.getApiKey())) {
+            if (resolveAllowed(request.getRequestURI(), request.getMethod()).isEmpty()) {
+                throw new BusinessException(ResultCode.FORBIDDEN, "鏃犳潈闄愯闂璧勬簮");
+            }
             ClientContext.set("api-service", "*");
             return true;
         }

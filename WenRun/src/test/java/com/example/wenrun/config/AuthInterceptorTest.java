@@ -41,6 +41,14 @@ class AuthInterceptorTest {
         assertEquals(ResultCode.FORBIDDEN, exception.getCode());
     }
 
+    @Test
+    void rejectsApiKeyRequestsToUnlistedApiRoutes() {
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> preHandleWithApiKey("GET", "/api/not-listed"));
+
+        assertEquals(ResultCode.FORBIDDEN, exception.getCode());
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "/api/visits",
@@ -59,6 +67,11 @@ class AuthInterceptorTest {
     @Test
     void allowsStaffToUseVisitBusinessRoutes() throws Exception {
         assertTrue(preHandle("POST", "/api/visits/start/42", AccountType.STAFF));
+    }
+
+    @Test
+    void allowsPatientsToUseAiChatRoutes() throws Exception {
+        assertTrue(preHandle("POST", "/api/ai/chat", AccountType.PATIENT));
     }
 
     @Test
@@ -95,9 +108,21 @@ class AuthInterceptorTest {
         return interceptor.preHandle(request, new MockHttpServletResponse(), new Object());
     }
 
+    private boolean preHandleWithApiKey(String method, String path) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(method, path);
+        request.addHeader("X-API-Key", "test-api-key");
+        return apiKeyInterceptor().preHandle(request, new MockHttpServletResponse(), new Object());
+    }
+
     private static JwtProperties jwtProperties() {
         JwtProperties properties = new JwtProperties();
         properties.setSecret(SECRET);
         return properties;
+    }
+
+    private AuthInterceptor apiKeyInterceptor() {
+        ApiKeyProperties properties = new ApiKeyProperties();
+        properties.setApiKey("test-api-key");
+        return new AuthInterceptor(jwtProperties(), properties, blacklistMapper);
     }
 }
