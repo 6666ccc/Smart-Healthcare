@@ -47,6 +47,7 @@ class AuthInterceptorTest {
                 () -> preHandleWithApiKey("GET", "/api/not-listed"));
 
         assertEquals(ResultCode.FORBIDDEN, exception.getCode());
+        assertEquals("无权限访问该资源", exception.getMessage());
     }
 
     @ParameterizedTest

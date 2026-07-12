@@ -74,7 +74,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         String apiKey = request.getHeader("X-API-Key");
         if (StringUtils.hasText(apiKey) && apiKey.equals(apiKeyProperties.getApiKey())) {
             if (resolveAllowed(request.getRequestURI(), request.getMethod()).isEmpty()) {
-                throw new BusinessException(ResultCode.FORBIDDEN, "鏃犳潈闄愯闂璧勬簮");
+                throw new BusinessException(ResultCode.FORBIDDEN, "无权限访问该资源");
             }
             ClientContext.set("api-service", "*");
             return true;
