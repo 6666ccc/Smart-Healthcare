@@ -118,6 +118,11 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         if (rx.getStatus() != BizStatus.RX_PENDING_PAY) {
             throw new BusinessException("仅待缴费处方可作废");
         }
+        OutpatientVisit visit = visitMapper.selectById(rx.getVisitId());
+        if (visit == null) {
+            throw new BusinessException("就诊记录不存在");
+        }
+        currentStaffSupport.assertOwnsStaff(visit.getStaffId());
         prescriptionMapper.updateStatus(id, BizStatus.RX_CANCELLED);
     }
 

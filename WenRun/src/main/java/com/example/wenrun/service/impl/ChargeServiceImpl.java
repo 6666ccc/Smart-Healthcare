@@ -82,6 +82,7 @@ public class ChargeServiceImpl implements ChargeService {
         if (visit == null) {
             throw new BusinessException("就诊记录不存在");
         }
+        assertVisitOwnership(visit);
         List<ChargeDetail> details = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
 
@@ -187,6 +188,12 @@ public class ChargeServiceImpl implements ChargeService {
 
     private void assertOrderOwnership(ChargeOrder order) {
         if (isPatientAccount() && !order.getPatientId().equals(currentPatientId())) {
+            throw new BusinessException("Access denied");
+        }
+    }
+
+    private void assertVisitOwnership(OutpatientVisit visit) {
+        if (isPatientAccount() && !visit.getPatientId().equals(currentPatientId())) {
             throw new BusinessException("Access denied");
         }
     }
