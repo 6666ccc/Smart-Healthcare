@@ -35,16 +35,28 @@ public class AuthInterceptor implements HandlerInterceptor {
     private static final List<String> STAFF_AND_PATIENT = List.of(AccountType.STAFF, AccountType.INTERNAL, AccountType.PATIENT);
 
     private static final List<PathRule> RULES = List.of(
-            new PathRule("/api/visits/start", STAFF_TYPES),
-            new PathRule("/api/medical-items", STAFF_TYPES),
-            new PathRule("/api/registrations", STAFF_AND_PATIENT),
-            new PathRule("/api/prescriptions", STAFF_TYPES),
-            new PathRule("/api/charges", STAFF_AND_PATIENT),
-            new PathRule("/api/schedules", STAFF_TYPES),
-            new PathRule("/api/dashboard", STAFF_TYPES),
-            new PathRule("/api/dispense", STAFF_TYPES),
-            new PathRule("/api/patients", STAFF_AND_PATIENT),
-            new PathRule("/api/drugs", STAFF_TYPES)
+            new PathRule("/api/auth/logout", null, STAFF_AND_PATIENT),
+            new PathRule("/api/visits", null, STAFF_TYPES),
+            new PathRule("/api/exam-requests", null, STAFF_TYPES),
+            new PathRule("/api/drug-stocks", null, STAFF_TYPES),
+            new PathRule("/api/depts", "GET", STAFF_TYPES),
+            new PathRule("/api/depts", null, List.of(AccountType.INTERNAL)),
+            new PathRule("/api/staff", "GET", STAFF_TYPES),
+            new PathRule("/api/staff", null, List.of(AccountType.INTERNAL)),
+            new PathRule("/api/medical-items", "GET", STAFF_AND_PATIENT),
+            new PathRule("/api/medical-items", null, List.of(AccountType.INTERNAL)),
+            new PathRule("/api/drugs", "GET", STAFF_AND_PATIENT),
+            new PathRule("/api/drugs", null, List.of(AccountType.INTERNAL)),
+            new PathRule("/api/schedules", "GET", STAFF_AND_PATIENT),
+            new PathRule("/api/schedules", null, List.of(AccountType.INTERNAL)),
+            new PathRule("/api/registrations", null, STAFF_AND_PATIENT),
+            new PathRule("/api/prescriptions", null, STAFF_TYPES),
+            new PathRule("/api/charges", "GET", STAFF_AND_PATIENT),
+            new PathRule("/api/charges/from-visit", "POST", STAFF_TYPES),
+            new PathRule("/api/dashboard", null, STAFF_TYPES),
+            new PathRule("/api/dispense", null, STAFF_TYPES),
+            new PathRule("/api/patients", null, STAFF_AND_PATIENT),
+            new PathRule("/api/user/profile", "PUT", STAFF_AND_PATIENT)
     );
 
     private static final Pattern CHARGE_PAY = Pattern.compile("^/api/charges/\\d+/pay$");
@@ -80,26 +92,36 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         // 角色校验
         String accountType = JwtUtil.getStringClaim(claims, "account_type");
-        assertAccountTypeAllowed(request.getRequestURI(), accountType);
+        assertAccountTypeAllowed(request.getRequestURI(), request.getMethod(), accountType);
         UserContext.setUserId(JwtUtil.getUserId(claims));
         UserContext.setAccountType(accountType);
         return true;
     }
 
-    private void assertAccountTypeAllowed(String path, String accountType) {
-        List<String> allowed = resolveAllowed(path);
-        if (allowed == null) return;
+    private void assertAccountTypeAllowed(String path, String method, String accountType) {
+        List<String> allowed = resolveAllowed(path, method);
         if (!StringUtils.hasText(accountType) || !allowed.contains(accountType)) {
             throw new BusinessException(ResultCode.FORBIDDEN, "无权限访问该资源");
         }
     }
 
-    private List<String> resolveAllowed(String path) {
-        if (CHARGE_PAY.matcher(path).matches()) return List.of(AccountType.PATIENT);
-        return RULES.stream().filter(r -> path.startsWith(r.prefix)).findFirst().map(PathRule::allowed).orElse(null);
+    private List<String> resolveAllowed(String path, String method) {
+        if (CHARGE_PAY.matcher(path).matches()) {
+            return "POST".equalsIgnoreCase(method) ? List.of(AccountType.PATIENT) : List.of();
+        }
+        return RULES.stream()
+                .filter(r -> r.matches(path, method))
+                .findFirst()
+                .map(PathRule::allowed)
+                .orElse(List.of());
     }
 
-    private record PathRule(String prefix, List<String> allowed) {}
+    private record PathRule(String prefix, String method, List<String> allowed) {
+        private boolean matches(String path, String requestMethod) {
+            return (method == null || method.equalsIgnoreCase(requestMethod))
+                    && (path.equals(prefix) || path.startsWith(prefix + "/"));
+        }
+    }
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
