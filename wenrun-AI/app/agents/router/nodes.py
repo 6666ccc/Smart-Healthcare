@@ -142,7 +142,7 @@ def store_memory(state: RouterState) -> dict:
         logger.warning("记忆存储失败 | user_id=%s error=%s", user_id, exc)
     return {}
 
-
+#TODO: 意图识别节点(将来可以引用结构化输出来实现)
 def analyze_intent(state: RouterState) -> dict:
     """路由图节点：用 LLM 解析用户意图，决定 target_agent 与置信度。
 
@@ -212,9 +212,9 @@ def registration_agent(state: RouterState) -> dict:
         version="v2",
     )
 
-    # 第 3 步：把 LangGraph 的 Interrupt 对象整理成前端可展示的 JSON。
-    interrupt_dicts = extract_interrupt_dicts(result)
-    formatted_interrupts = format_interrupts(interrupt_dicts)
+    # 第 3 步：把 LangGraph 的 Interrupt 对象整理成前端可展示的 JSON。TODO: 将来考虑将这两个工具函数合并成一个工具函数
+    interrupt_dicts = extract_interrupt_dicts(result) #提取中断内容
+    formatted_interrupts = format_interrupts(interrupt_dicts) #整理成前端可展示的JSON
 
     if len(formatted_interrupts) > 0:
         # 第 4A 步：有中断时，主图不能继续执行工具。
@@ -255,11 +255,11 @@ def handle_tool_hitl(state: RouterState) -> dict:
     输入：RouterState（_pending_interrupts 非空时进入此节点）
     输出：多轮中断时 status=pending；结束时 status=completed + final_output
     """
-    pending = state.get("_pending_interrupts") or []
-    if not pending:
+    pending = state.get("_pending_interrupts") or [] # 获取中断内容
+    if not pending: # 如果中断内容为空，则返回completed状态
         return {"status": "completed", "_pending_interrupts": []}
 
-    config: RunnableConfig = build_hitl_config(state["session_id"])
+    config: RunnableConfig = build_hitl_config(state["session_id"]) # 构建可配置的RunnableConfig对象
 
     # 第 1 步：暂停主图，等待前端提交 decision。
     # 首次执行：LangGraph 在这里暂停，将 state 写入 checkpointer。

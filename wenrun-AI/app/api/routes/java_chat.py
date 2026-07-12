@@ -31,6 +31,16 @@ def _serialize_router_result(result: dict) -> dict[str, Any]:
     }
 
 
+def _extract_user_access_token(
+    request: JavaChatRequest, http_request: Request
+) -> str | None:
+    """从聊天请求体和 HTTP 头中提取 token。
+
+    输入：POST /java/chat 的 Pydantic 请求体，以及 FastAPI Request。
+    输出：患者 access_token 或 None，供 set_patient_token 写入本次请求上下文。
+    """
+    return _extract_access_token(http_request, request.extra)
+
 def _extract_access_token(
     http_request: Request,
     extra: dict[str, Any] | None = None,
@@ -57,17 +67,6 @@ def _extract_access_token(
 
     x_token = http_request.headers.get("X-Token", "").strip()
     return x_token or None
-
-
-def _extract_user_access_token(
-    request: JavaChatRequest, http_request: Request
-) -> str | None:
-    """从聊天请求体和 HTTP 头中提取 token。
-
-    输入：POST /java/chat 的 Pydantic 请求体，以及 FastAPI Request。
-    输出：患者 access_token 或 None，供 set_patient_token 写入本次请求上下文。
-    """
-    return _extract_access_token(http_request, request.extra)
 
 
 def _serialize_hitl_result(result: dict) -> dict[str, Any]:
@@ -127,6 +126,7 @@ async def java_chat(request: JavaChatRequest, http_request: Request) -> dict[str
     finally:
         # 第 5 步：清理 token，避免当前患者身份串到后续请求。
         set_patient_token(None)
+
 
 # HITL 恢复入口：
 # 前端在用户点击 approve / reject / respond 后，把 decision 和同一个 session_id 发回来。
