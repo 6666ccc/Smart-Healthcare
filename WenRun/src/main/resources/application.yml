@@ -32,11 +32,18 @@ ai:
     connect-timeout: 5s
     read-timeout: 120s
     stream-read-timeout: 10m
+    knowledge-ingest-path: /v1/knowledge/ingest
+    knowledge-delete-path: /v1/knowledge/{knowledgeBase}/{documentId}
 
   knowledge:
     storage:
       root: ./data/knowledge
       max-file-size: 20MB
+    tasks:
+      core-pool-size: 2
+      max-pool-size: 4
+      queue-capacity: 100
+      stale-after: 30m
 
 logging:
   level:
