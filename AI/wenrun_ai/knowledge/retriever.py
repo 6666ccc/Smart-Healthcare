@@ -42,4 +42,3 @@ def retrieve_knowledge_context(
             parts.append(f"[来源: {source}；片段: {index}]\n{text}")
     parts.append("</knowledge_context>")
     return "\n\n".join(parts) if len(parts) > 2 else None
-

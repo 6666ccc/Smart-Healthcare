@@ -71,4 +71,3 @@ def route_intent(message: str, *, model=None) -> IntentRoute:
         return parse_intent_response(content if isinstance(content, str) else str(content))
     except Exception:
         return IntentRoute(Intent.CHAT, Intent.CHAT.agent_name, 0.0, "意图识别服务不可用")
-

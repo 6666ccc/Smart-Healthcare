@@ -42,7 +42,7 @@ curl -X POST "http://localhost:8080/api/ai/knowledge-bases/medical-general/docum
 GET /api/ai/knowledge-bases/{knowledgeBase}/documents?status=READY&pageNum=1&pageSize=20
 ```
 
-`status` 可省略，可选值为 `PROCESSING`、`READY`、`FAILED`、`DELETING`、`DELETE_FAILED`。
+`status` 可省略，可选值为 `PROCESSING`、`READY`、`FAILED`、`DELETING`、`DELETE_FAILED`、`DELETED`。
 
 ## 查询详情
 
@@ -91,3 +91,37 @@ ai:
 ```
 
 部署前执行 `docs/SQL/migration_add_ai_knowledge_documents.sql`。本期不支持管理员前端、扫描 PDF OCR、图片、音频或视频。
+
+## AI 服务与双知识库配置
+
+Java 与 Python 必须配置相同且非空的内部密钥：
+
+```powershell
+$env:WENRUN_AI_API_KEY = "替换为部署环境生成的强随机密钥"
+```
+
+Python AI 服务还需要配置 OpenAI 兼容模型与 Qdrant：
+
+```text
+OPENAI_API_KEY=...
+OPENAI_BASE_URL=...
+OPENAI_CHAT_MODEL=...
+EMBEDDING_MODEL=...
+QDRANT_URL=http://localhost:6333
+QDRANT_API_KEY=
+WENRUN_API_KEY=与 WENRUN_AI_API_KEY 相同
+KNOWLEDGE_TOP_K=5
+KNOWLEDGE_SCORE_THRESHOLD=0.45
+KNOWLEDGE_EMBEDDING_BATCH_SIZE=32
+KNOWLEDGE_MAX_FILE_SIZE=20971520
+```
+
+Qdrant 集合与 Agent 的关系固定如下：
+
+| 意图 | Agent | 知识库 | Qdrant 集合 | Tool |
+| --- | --- | --- | --- | --- |
+| 通用医疗科普 | `medical_agent` | `medical-general` | `wenrun_medical_general` | 无 |
+| 医院定制服务、医生、地图、就诊步骤、挂号 | `registration_agent` | `hospital-custom` | `wenrun_hospital_custom` | 医院业务 Tool |
+| 问候和闲聊 | `chat_agent` | 不检索 | 不检索 | 无 |
+
+上传成功仅表示 Java 已创建异步任务；管理员应通过详情或列表接口等待状态变为 `READY`。若 Python 解析、Embedding 或 Qdrant 入库失败，状态会变为 `FAILED`，可调用重试接口重新执行。
