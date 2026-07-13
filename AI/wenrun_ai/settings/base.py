@@ -84,6 +84,14 @@ def get_knowledge_max_file_size() -> int:
     return int(os.getenv("KNOWLEDGE_MAX_FILE_SIZE") or str(20 * 1024 * 1024))
 
 
+def get_knowledge_top_k() -> int:
+    return int(os.getenv("KNOWLEDGE_TOP_K") or "5")
+
+
+def get_knowledge_score_threshold() -> float:
+    return float(os.getenv("KNOWLEDGE_SCORE_THRESHOLD") or "0.45")
+
+
 def get_embedding_model_name() -> str:
     return (os.getenv("EMBEDDING_MODEL") or "text-embedding-3-small").strip()
 

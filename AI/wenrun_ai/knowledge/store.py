@@ -70,3 +70,27 @@ class KnowledgeStore:
             ),
             wait=True,
         )
+
+    def search(
+        self,
+        knowledge_base: KnowledgeBase,
+        vector: list[float],
+        *,
+        top_k: int,
+        score_threshold: float,
+    ) -> list[dict[str, Any]]:
+        collection = knowledge_base.collection_name
+        existing = {item.name for item in self._client.get_collections().collections}
+        if collection not in existing:
+            return []
+        result = self._client.query_points(
+            collection_name=collection,
+            query=vector,
+            limit=top_k,
+            score_threshold=score_threshold,
+            with_payload=True,
+        )
+        return [
+            {"score": point.score, "payload": dict(point.payload or {})}
+            for point in result.points
+        ]
