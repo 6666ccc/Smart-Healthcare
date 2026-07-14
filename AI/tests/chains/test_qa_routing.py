@@ -1,32 +1,56 @@
-from langchain_core.messages import AIMessage
+import pytest
 
 from wenrun_ai.chains import qa
-from wenrun_ai.chains.router import Intent, IntentRoute
 
 
-class FakeAgent:
-    def __init__(self):
-        self.input = None
+def test_run_chat_delegates_completed_execution(monkeypatch):
+    class Execution:
+        status = "completed"
+        reply = "科普回答"
 
-    def invoke(self, value, config):
-        self.input = value
-        return {"messages": [AIMessage(content="科普回答")]}
+    monkeypatch.setattr(qa, "run_chat_execution", lambda *args, **kwargs: Execution())
+    assert qa.run_chat("高血压是什么") == "科普回答"
 
 
-def test_run_chat_routes_and_injects_selected_knowledge(monkeypatch):
-    agent = FakeAgent()
-    route = IntentRoute(Intent.MEDICAL, "medical_agent", 0.96, "医疗科普")
-    monkeypatch.setattr(qa, "route_intent", lambda message: route)
-    monkeypatch.setattr(
-        qa,
-        "_retrieve_for_intent",
-        lambda message, intent: '<knowledge_context knowledge_base="medical-general">资料</knowledge_context>',
-    )
-    monkeypatch.setattr(qa, "get_agent", lambda intent: agent)
+def test_run_chat_does_not_turn_pending_write_into_success(monkeypatch):
+    class Execution:
+        status = "pending"
+        reply = None
 
-    reply = qa.run_chat("高血压是什么")
+    monkeypatch.setattr(qa, "run_chat_execution", lambda *args, **kwargs: Execution())
+    with pytest.raises(RuntimeError, match="pending human approval"):
+        qa.run_chat("帮我挂号")
 
-    assert reply == "科普回答"
-    prompt = agent.input["messages"][0].content
-    assert 'knowledge_base="medical-general"' in prompt
-    assert "用户问题：高血压是什么" in prompt
+
+def test_resume_chat_execution_reuses_module_workflow(monkeypatch):
+    calls = []
+
+    class Workflow:
+        def invoke(self, input):
+            calls.append(("invoke", input.conversation_id))
+            return "first"
+
+        def resume(self, conversation_id, decision, **kwargs):
+            calls.append(("resume", conversation_id, decision))
+            return "second"
+
+    workflow = Workflow()
+    monkeypatch.setattr(qa, "_chat_workflow", workflow)
+
+    assert qa.run_chat_execution("register", conversation_id="same-thread") == "first"
+    assert qa.resume_chat_execution("same-thread", {"decision": "approve"}) == "second"
+    assert calls == [
+        ("invoke", "same-thread"),
+        ("resume", "same-thread", {"decision": "approve"}),
+    ]
+
+
+def test_resume_chat_execution_forwards_api_key(monkeypatch):
+    captured = {}
+    class Workflow:
+        def resume(self, conversation_id, decision, **kwargs):
+            captured.update(kwargs)
+            return "resumed"
+    monkeypatch.setattr(qa, "_chat_workflow", Workflow())
+    assert qa.resume_chat_execution("thread", {"decision": "approve"}, user_id=7, api_key="internal") == "resumed"
+    assert captured == {"user_id": 7, "api_key": "internal"}

@@ -14,6 +14,8 @@ from zoneinfo import ZoneInfo
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
+from langchain.agents.middleware import HumanInTheLoopMiddleware
+from langgraph.checkpoint.memory import InMemorySaver
 
 from wenrun_ai.logging import (
     ToolCallCallbackHandler,
@@ -21,6 +23,7 @@ from wenrun_ai.logging import (
     setup_logging,
 )
 from wenrun_ai.auth_context import wenrun_api_context
+from wenrun_ai.graph.hitl import WRITE_TOOL_POLICIES
 from wenrun_ai.chains.router import Intent, route_intent
 from wenrun_ai.knowledge.retriever import retrieve_knowledge_context
 from wenrun_ai.knowledge.types import KnowledgeBase
@@ -76,6 +79,8 @@ CHAT_SYSTEM_PROMPT = """你是温润医院友善、耐心的聊天助手。
 如果用户转而询问医疗知识或医院服务，请提醒其明确描述需求。"""
 
 _agents: dict[Intent, Any] = {}
+_registration_checkpointer = InMemorySaver()
+_chat_workflow: Any | None = None
 
 
 def build_llm() -> ChatOpenAI:
@@ -96,11 +101,18 @@ def build_agent(intent: Intent = Intent.REGISTRATION):
         Intent.REGISTRATION: REGISTRATION_SYSTEM_PROMPT,
         Intent.CHAT: CHAT_SYSTEM_PROMPT,
     }[intent]
+    kwargs: dict[str, Any] = {}
+    if intent is Intent.REGISTRATION:
+        kwargs = {
+            "middleware": [HumanInTheLoopMiddleware(WRITE_TOOL_POLICIES)],
+            "checkpointer": _registration_checkpointer,
+        }
     return create_agent(
         llm,
         tools,
         system_prompt=prompt,
         name=intent.agent_name,
+        **kwargs,
     )
 
 
@@ -125,11 +137,10 @@ def _retrieve_for_intent(message: str, intent: Intent) -> str | None:
         return None
     try:
         return retrieve_knowledge_context(message, knowledge_base)
-    except Exception as exc:
+    except Exception:
         chat_logger.warning(
-            "知识库检索失败，继续使用基础 Agent | knowledge_base=%s error=%s",
+            "知识库检索失败，继续使用基础 Agent | knowledge_base=%s",
             knowledge_base.value,
-            exc,
         )
         return None
 
@@ -213,7 +224,7 @@ def _build_human_message(
     return HumanMessage(content="\n\n---\n\n".join(parts))
 
 
-def run_chat(
+def _legacy_run_chat(
     message: str,
     *,
     api_key: str | None = None,
@@ -281,6 +292,64 @@ def run_chat(
         add_memory_pair_with_dedup(conversation_id, user_id, message, reply)
 
     return reply
+
+
+def run_chat_execution(
+    message: str,
+    *,
+    api_key: str | None = None,
+    user_id: int | None = None,
+    patient_id: int | None = None,
+    user_context: str | None = None,
+    conversation_id: str | None = None,
+):
+    """Execute a chat turn and expose pending HITL operations to API callers."""
+    from wenrun_ai.graph.state import ChatInput
+
+    return _get_chat_workflow().invoke(ChatInput(
+        message=message,
+        api_key=api_key,
+        user_id=user_id,
+        patient_id=patient_id,
+        user_context=user_context,
+        conversation_id=conversation_id,
+    ))
+
+
+def resume_chat_execution(conversation_id: str, decision: dict[str, Any], *, user_id: int | None = None, api_key: str | None = None):
+    """Resume the same module-level graph/checkpoint used for the initial turn."""
+    return _get_chat_workflow().resume(conversation_id, decision, user_id=user_id, api_key=api_key)
+
+
+def _get_chat_workflow():
+    global _chat_workflow
+    if _chat_workflow is None:
+        from wenrun_ai.graph.workflow import ChatWorkflow
+        _chat_workflow = ChatWorkflow()
+    return _chat_workflow
+
+
+def run_chat(
+    message: str,
+    *,
+    api_key: str | None = None,
+    user_id: int | None = None,
+    patient_id: int | None = None,
+    user_context: str | None = None,
+    conversation_id: str | None = None,
+) -> str:
+    """Compatibility adapter that never represents a pending write as success."""
+    execution = run_chat_execution(
+        message,
+        api_key=api_key,
+        user_id=user_id,
+        patient_id=patient_id,
+        user_context=user_context,
+        conversation_id=conversation_id,
+    )
+    if execution.status != "completed" or execution.reply is None:
+        raise RuntimeError("Chat turn is pending human approval; use run_chat_execution.")
+    return execution.reply
 
 
 async def aiter_chat_events(

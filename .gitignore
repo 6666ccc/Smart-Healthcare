@@ -1,4 +1,4 @@
-# ===== Python (AILearn) =====
+# ===== Python (AI) =====
 .venv/
 venv/
 __pycache__/
@@ -13,7 +13,7 @@ __pycache__/
 dist/
 build/
 
-# ===== Java / Maven (HuiLiao) =====
+# ===== Java / Maven (WenRun) =====
 target/
 HELP.md
 .mvn/wrapper/maven-wrapper.jar
@@ -22,7 +22,7 @@ HELP.md
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-# ===== Node / React (huiliao-react) =====
+# ===== Node / React (wenrun-react) =====
 node_modules/
 dist-ssr
 *.local
