@@ -28,7 +28,7 @@ ai:
     chat-path: /v1/chat
     chat-stream-path: /v1/chat/stream
     health-path: /health
-    api-key: ${WENRUN_AI_API_KEY:}
+    api-key: wenrun-ai-internal-key-2026 
     connect-timeout: 5s
     read-timeout: 120s
     stream-read-timeout: 10m

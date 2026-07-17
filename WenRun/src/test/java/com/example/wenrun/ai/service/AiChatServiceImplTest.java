@@ -20,7 +20,7 @@ class AiChatServiceImplTest {
         AiServiceClient client = mock(AiServiceClient.class);
         ChatResumeRequestDTO request = new ChatResumeRequestDTO();
         request.setConversationId("conversation-1");
-        request.setDecision(Map.of("action", "approve"));
+        request.setDecision(Map.of("decision", "approve"));
         ChatExecutionVO expected = new ChatExecutionVO();
         expected.setStatus("completed");
         when(client.resume(request)).thenReturn(expected);

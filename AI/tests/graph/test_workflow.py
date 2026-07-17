@@ -94,6 +94,25 @@ def test_write_action_pauses_then_resume_same_thread_completes():
     assert calls == [None, {"decisions": [{"type": "approve"}]}]
 
 
+def test_completed_hitl_thread_rejects_duplicate_resume():
+    def run_agent(selected, human_message, state, decision=None):
+        if decision is None:
+            return {"interrupts": [{"tool": "create_registration", "args": {}}]}
+        return {"reply": "created"}
+
+    workflow = ChatWorkflow(
+        router=lambda _: _route(Intent.REGISTRATION),
+        memory_search=lambda *_: None,
+        memory_store=lambda *_: None,
+        agent_runner=run_agent,
+    )
+    workflow.invoke(ChatInput(message="register", conversation_id="duplicate"))
+    workflow.resume("duplicate", {"decision": "approve"})
+
+    with pytest.raises(LookupError):
+        workflow.resume("duplicate", {"decision": "approve"})
+
+
 def test_workflow_adapts_real_hitl_action_requests_payload():
     def run_agent(selected, human_message, state, decision=None):
         if decision is None:

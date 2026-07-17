@@ -131,3 +131,18 @@ def test_resume_missing_checkpoint_is_a_client_error(monkeypatch):
 
     assert response.status_code in {404, 409}
     assert "missing workflow" not in response.text
+
+
+def test_resume_invalid_decision_is_a_bad_request(monkeypatch):
+    def resume(*_args, **_kwargs):
+        raise ValueError("unsupported decision")
+
+    monkeypatch.setattr(chat, "resume_chat_execution", resume)
+
+    response = client().post(
+        "/v1/chat/resume",
+        json={"conversationId": "pending", "decision": {"action": "approve"}},
+    )
+
+    assert response.status_code == 400
+    assert "unsupported decision" not in response.text

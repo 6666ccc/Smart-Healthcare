@@ -62,8 +62,11 @@ public class AiChatController {
         ChatResponseVO response = aiChatService.chat(dto);
 
         // 保存 AI 回复到 chat_messages
-        saveMessage(dto.getConversationId(), dto.getUserId(), "assistant",
-                response != null ? response.getReply() : "");
+        if (response != null
+                && "completed".equalsIgnoreCase(response.getStatus())
+                && StringUtils.hasText(response.getReply())) {
+            saveMessage(dto.getConversationId(), dto.getUserId(), "assistant", response.getReply());
+        }
 
         return Result.success(response);
     }
@@ -106,6 +109,7 @@ public class AiChatController {
         CompletableFuture.runAsync(() -> {
             StringBuilder fullReply = new StringBuilder();
             boolean[] completed = {false};
+            boolean[] interrupted = {false};
             try {
                 aiChatService.streamChat(dto, event -> {
                     if (event == null || event.getType() == null) {
@@ -121,6 +125,13 @@ public class AiChatController {
                         }
 
                         emitter.send(SseEmitter.event().data(event));
+
+                        if ("interrupt".equals(event.getType())) {
+                            interrupted[0] = true;
+                            completed[0] = true;
+                            emitter.complete();
+                            return;
+                        }
 
                         if ("token".equals(event.getType()) && event.getContent() != null) {
                             fullReply.append(event.getContent());
@@ -140,7 +151,7 @@ public class AiChatController {
                 });
 
                 if (!completed[0]) {
-                    if (!fullReply.isEmpty()) {
+                    if (!interrupted[0] && !fullReply.isEmpty()) {
                         saveMessage(dto.getConversationId(), dto.getUserId(), "assistant", fullReply.toString());
                     }
                     emitter.complete();

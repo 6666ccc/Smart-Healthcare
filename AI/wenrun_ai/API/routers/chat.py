@@ -30,6 +30,7 @@ def _resolve_api_key(body: ChatRequest) -> tuple[str | None, str]:
 
 
 def _execution_response(execution) -> ChatExecutionResponse:
+    """返回执行响应体，包含回复、状态、会话 ID 和中断信息"""
     return ChatExecutionResponse(
         reply=execution.reply,
         status=execution.status,
@@ -39,8 +40,12 @@ def _execution_response(execution) -> ChatExecutionResponse:
 
 
 def _raise_execution_error(route: str, exc: Exception) -> None:
+    if isinstance(exc, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid HITL decision.") from exc
     api_logger.exception("%s failed", route)
-    raise HTTPException(status_code=500, detail="聊天服务暂时不可用，请稍后重试。") from exc
+    raise HTTPException(
+        status_code=500, detail="聊天服务暂时不可用，请稍后重试。"
+    ) from exc
 
 
 @router.post("/chat", response_model=ChatExecutionResponse)
@@ -73,6 +78,7 @@ def post_chat(body: ChatRequest, request: Request) -> ChatExecutionResponse:
         )
 
     try:
+      # 执行聊天
         execution = run_chat_execution(
             body.message,
             api_key=api_key,
@@ -89,7 +95,9 @@ def post_chat(body: ChatRequest, request: Request) -> ChatExecutionResponse:
 
 
 @router.post("/chat/resume", response_model=ChatExecutionResponse)
-def post_chat_resume(body: ChatResumeRequest, request: Request) -> ChatExecutionResponse:
+def post_chat_resume(
+    body: ChatResumeRequest, request: Request
+) -> ChatExecutionResponse:
     api_key, _source = _resolve_api_key(body)
     try:
         execution = resume_chat_execution(
@@ -99,7 +107,10 @@ def post_chat_resume(body: ChatResumeRequest, request: Request) -> ChatExecution
             api_key=api_key,
         )
     except LookupError as exc:
-        api_logger.info("POST /v1/chat/resume checkpoint not found | conversation_id=%s", body.conversation_id)
+        api_logger.info(
+            "POST /v1/chat/resume checkpoint not found | conversation_id=%s",
+            body.conversation_id,
+        )
         raise HTTPException(status_code=404, detail="未找到可恢复的会话。") from exc
     except Exception as exc:
         _raise_execution_error("POST /v1/chat/resume", exc)
@@ -150,7 +161,10 @@ async def post_chat_stream(body: ChatRequest, request: Request) -> StreamingResp
             yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception:
             api_logger.exception("POST /v1/chat/stream failed")
-            error_event = {"type": "error", "content": "聊天服务暂时不可用，请稍后重试。"}
+            error_event = {
+                "type": "error",
+                "content": "聊天服务暂时不可用，请稍后重试。",
+            }
             yield f"data: {json.dumps(error_event, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(

@@ -54,20 +54,36 @@ function ChatWelcome({ onSuggest, isPc }) {
 function HitlConfirmationCard({ interrupt, onDecision }) {
   const [editing, setEditing] = useState(false)
   const [argsText, setArgsText] = useState(() => JSON.stringify(interrupt.args || {}, null, 2))
+  const [rejecting, setRejecting] = useState(false)
+  const [rejectMessage, setRejectMessage] = useState('')
   const [validationError, setValidationError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const decisions = interrupt.allowedDecisions || []
 
-  const decide = (action) => {
+  const decide = async (decision) => {
+    if (submitting) return
+    if (decision === 'reject' && !rejectMessage.trim()) {
+      setRejecting(true)
+      setValidationError('\u8bf7\u8f93\u5165\u62d2\u7edd\u539f\u56e0')
+      return
+    }
     let args
-    if (action === 'edit') {
+    if (decision === 'edit') {
       try {
         args = JSON.parse(argsText)
+        if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('object required')
       } catch {
         setValidationError('请输入有效的 JSON 参数。')
         return
       }
     }
-    onDecision(interrupt, action, args)
+    setValidationError('')
+    setSubmitting(true)
+    try {
+      await onDecision(interrupt, decision, args, rejectMessage.trim())
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -77,6 +93,7 @@ function HitlConfirmationCard({ interrupt, onDecision }) {
       {interrupt.args && <pre style={{ margin: '0 0 8px', whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>{JSON.stringify(interrupt.args, null, 2)}</pre>}
       {editing && <textarea className="input" value={argsText} onChange={(e) => { setArgsText(e.target.value); setValidationError('') }} rows={5} style={{ width: '100%', marginBottom: 8, resize: 'vertical' }} />}
       {validationError && <p style={{ color: 'var(--c-danger)', margin: '0 0 8px', fontSize: '0.8rem' }}>{validationError}</p>}
+      {rejecting && <textarea className="input" value={rejectMessage} onChange={(e) => { setRejectMessage(e.target.value); setValidationError('') }} rows={3} placeholder="\u8bf7\u8f93\u5165\u62d2\u7edd\u539f\u56e0" style={{ width: '100%', marginBottom: 8, resize: 'vertical' }} />}
       {interrupt.processed ? <span className="text-muted text-sm">已处理</span> : (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {decisions.includes('approve') && <button type="button" className="btn btn--accent btn--sm" onClick={() => decide('approve')}>确认</button>}
@@ -465,7 +482,7 @@ function useChat() {
     }
   }
 
-  const handleInterruptDecision = async (interrupt, action, args) => {
+  const handleInterruptDecision = async (interrupt, decision, args, message) => {
     const conversationId = interrupt.conversationId || activeId
     setSessions(prev => prev.map(s => {
       if (s.id !== conversationId) return s
@@ -478,24 +495,38 @@ function useChat() {
     }))
 
     try {
-      const decision = { action, interruptId: interrupt.id }
-      if (args !== undefined) decision.args = args
-      const result = await resumeChat({ conversationId, decision })
+      const payload = { decision }
+      if (decision === 'edit') payload.args = args
+      if (decision === 'reject') payload.message = message
+      const result = await resumeChat({ conversationId, decision: payload })
       const resultConversationId = result.conversationId || conversationId
       setSessions(prev => prev.map(s => {
         if (s.id !== resultConversationId) return s
         const messages = [...s.messages]
         if (result.reply) messages.push({ role: 'assistant', content: result.reply })
-        for (const nextInterrupt of result.interrupts || []) {
+        for (const [index, nextInterrupt] of (result.interrupts || []).entries()) {
           messages.push({
             role: 'assistant',
             content: '',
-            interrupt: { ...nextInterrupt, conversationId: resultConversationId },
+            interrupt: {
+              ...nextInterrupt,
+              id: nextInterrupt.id || `${resultConversationId}-${Date.now()}-${index}`,
+              conversationId: resultConversationId,
+            },
           })
         }
         return { ...s, messages }
       }))
     } catch (e) {
+      setSessions(prev => prev.map(s => {
+        if (s.id !== conversationId) return s
+        return {
+          ...s,
+          messages: s.messages.map(item => item.interrupt?.id === interrupt.id
+            ? { ...item, interrupt: { ...item.interrupt, processed: false } }
+            : item),
+        }
+      }))
       setSessions(prev => prev.map(s => s.id === conversationId
         ? { ...s, messages: [...s.messages, { role: 'assistant', content: `恢复操作失败：${e.message}` }] }
         : s))
