@@ -83,6 +83,11 @@ def test_normalize_decision_rejects_unknown_tools_and_decisions(tool, decision):
         normalize_decision(tool, {"decision": decision})
 
 
+def test_normalize_decision_does_not_accept_ui_action_alias():
+    with pytest.raises(ValueError):
+        normalize_decision("create_registration", {"action": "approve"})
+
+
 def test_normalize_decision_uses_the_specific_tools_allowed_decisions(monkeypatch):
     monkeypatch.setitem(
         WRITE_TOOL_POLICIES["create_patient"], "allowed_decisions", ["approve"]

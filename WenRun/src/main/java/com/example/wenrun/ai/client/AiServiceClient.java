@@ -73,7 +73,9 @@ public class AiServiceClient {
                                         + (detail.isEmpty() ? "" : " - " + detail));
                     })
                     .body(ChatResponseVO.class);
-            if (response == null || response.getReply() == null) {
+            if (response == null
+                    || (!"pending".equalsIgnoreCase(response.getStatus())
+                    && response.getReply() == null)) {
                 throw new AiServiceException("AI 服务返回为空");
             }
             return response;

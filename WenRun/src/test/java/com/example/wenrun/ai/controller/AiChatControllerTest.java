@@ -43,7 +43,7 @@ class AiChatControllerTest {
                 staffMapper, patientMapper, chatMessageMapper, properties);
         ChatResumeRequestDTO request = new ChatResumeRequestDTO();
         request.setConversationId("conversation-1");
-        request.setDecision(Map.of("action", "approve"));
+        request.setDecision(Map.of("decision", "approve"));
         request.setUserId(999L);
         request.setUsername("spoofed-user");
 

@@ -116,6 +116,7 @@ def build_agent(intent: Intent = Intent.REGISTRATION):
     )
 
 
+# 获取Agent
 def get_agent(intent: Intent = Intent.REGISTRATION):
     """按意图懒加载 Agent，避免重复编译图。"""
     if intent not in _agents:
@@ -303,7 +304,7 @@ def run_chat_execution(
     user_context: str | None = None,
     conversation_id: str | None = None,
 ):
-    """Execute a chat turn and expose pending HITL operations to API callers."""
+    """执行聊天，返回执行响应体，包含回复、状态、会话 ID 和中断信息"""
     from wenrun_ai.graph.state import ChatInput
 
     return _get_chat_workflow().invoke(ChatInput(
@@ -317,15 +318,15 @@ def run_chat_execution(
 
 
 def resume_chat_execution(conversation_id: str, decision: dict[str, Any], *, user_id: int | None = None, api_key: str | None = None):
-    """Resume the same module-level graph/checkpoint used for the initial turn."""
+    """恢复聊天，返回执行响应体，包含回复、状态、会话 ID 和中断信息"""
     return _get_chat_workflow().resume(conversation_id, decision, user_id=user_id, api_key=api_key)
 
-
+# 获取聊天工作流
 def _get_chat_workflow():
     global _chat_workflow
-    if _chat_workflow is None:
+    if _chat_workflow is None: # 如果聊天工作流不存在，则创建一个
         from wenrun_ai.graph.workflow import ChatWorkflow
-        _chat_workflow = ChatWorkflow()
+        _chat_workflow = ChatWorkflow() # 创建聊天工作流
     return _chat_workflow
 
 
