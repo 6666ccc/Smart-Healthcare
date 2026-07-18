@@ -2,7 +2,7 @@
 export function homePath(portalType) {
   if (portalType === 'doctor') return '/doctor/home'
   if (portalType === 'admin') return '/admin/home'
-  return '/home'
+  return '/assistant'
 }
 
 export function isDoctorPortal(user) {

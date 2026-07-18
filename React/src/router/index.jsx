@@ -1,7 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { GuestOnly, RequireAuth, RequirePortal } from './guards'
 import Login from '../views/Login'
-import Home from '../views/Home'
 import Registration from '../views/Registration'
 import RegistrationDetail from '../views/Registration/Detail'
 import Department from '../views/Department'
@@ -27,7 +26,7 @@ export const router = createBrowserRouter([
       {
         element: <RequirePortal portal="patient" />,
         children: [
-          { path: '/home',             element: <Home /> },
+          { path: '/home',             element: <Navigate to="/assistant" replace /> },
           { path: '/user',             element: <User /> },
           { path: '/assistant',        element: <Assistant /> },
           { path: '/registration',     element: <Registration /> },
