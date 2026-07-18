@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { chatStream, resumeChat, listCharges, listRegistrations } from '../../api'
+import { chatStream, listCharges, listRegistrations } from '../../api'
 import { listVisits } from '../../api/modules/consultation'
 import { useAuth } from '../../store'
 import { IconAI, IconCalendar, IconLogo, IconRecord, IconWallet } from '../shared'
@@ -57,7 +57,10 @@ function useChat() {
   const [streaming, setStreaming] = useState(false)
   const abortRef = useRef(null)
 
-  useEffect(() => localStorage.setItem('wenrun_ai_sessions', JSON.stringify(sessions)), [sessions])
+  useEffect(() => {
+    localStorage.setItem('wenrun_ai_sessions', JSON.stringify(sessions))
+    return undefined
+  }, [sessions])
 
   const updateSession = (id, updater) => setSessions((previous) => previous.map((session) => session.id === id ? updater(session) : session))
 
@@ -82,25 +85,15 @@ function useChat() {
           updateSession(conversationId, (session) => {
             const messages = [...session.messages]
             const last = messages[messages.length - 1]
-            if (last?.role === 'assistant' && !last.interrupt) messages[messages.length - 1] = { ...last, content: last.content + chunk }
+            if (last?.role === 'assistant') messages[messages.length - 1] = { ...last, content: last.content + chunk }
             else messages.push({ role: 'assistant', content: chunk })
             return { ...session, messages }
           })
         },
-        onEvent: (event) => {
-          if (event.type !== 'interrupt') return
-          const interrupts = Array.isArray(event.interrupts) ? event.interrupts : []
-          updateSession(conversationId, (session) => ({
-            ...session,
-            messages: [...session.messages, ...interrupts.map((interrupt) => ({
-              role: 'assistant', content: interrupt.summary || '我需要你的确认才能继续。', interrupt: { ...interrupt, conversationId },
-            }))],
-          }))
-        },
         onDone: (reply) => updateSession(conversationId, (session) => {
           const messages = [...session.messages]
           const last = messages[messages.length - 1]
-          if (last?.role === 'assistant' && !last.interrupt) messages[messages.length - 1] = { ...last, content: reply || last.content }
+          if (last?.role === 'assistant') messages[messages.length - 1] = { ...last, content: reply || last.content }
           else if (reply) messages.push({ role: 'assistant', content: reply })
           return { ...session, messages }
         }),
@@ -114,19 +107,8 @@ function useChat() {
     }
   }
 
-  const decide = async (interrupt, action) => {
-    const conversationId = interrupt.conversationId || activeId
-    updateSession(conversationId, (session) => ({ ...session, messages: session.messages.map((message) => message.interrupt?.id === interrupt.id ? { ...message, interrupt: { ...message.interrupt, processed: true } } : message) }))
-    try {
-      const result = await resumeChat({ conversationId, decision: { action, interruptId: interrupt.id } })
-      if (result?.reply) updateSession(conversationId, (session) => ({ ...session, messages: [...session.messages, { role: 'assistant', content: result.reply }] }))
-    } catch (error) {
-      updateSession(conversationId, (session) => ({ ...session, messages: [...session.messages, { role: 'assistant', content: `确认没有完成：${error.message || '请稍后重试。'}` }] }))
-    }
-  }
-
   return {
-    sessions, activeId, replying, streaming, sendMessage, decide,
+    sessions, activeId, replying, streaming, sendMessage,
     newChat: () => { const id = makeId(); setSessions((previous) => [...previous, { id, title: '新的问诊', messages: [] }]); setActiveId(id) },
     selectSession: setActiveId,
     deleteSession: (id) => setSessions((previous) => previous.length <= 1 ? previous : previous.filter((session) => session.id !== id)),
@@ -156,13 +138,11 @@ function ActionCard({ action, onClick }) {
   return <button className={`ai-action ai-action--${action.tone}`} onClick={onClick}><span className="ai-action__icon"><Icon size={20} /></span><span><strong>{action.label}</strong><small>{action.hint}</small></span><b>↗</b></button>
 }
 
-function Message({ message, onDecision }) {
+function Message({ message }) {
   const user = message.role === 'user'
   return <div className={`ai-message ai-message--${user ? 'user' : 'assistant'}`}>
     {!user && <div className="ai-message__avatar"><IconLogo size={17} /></div>}
-    <div className="ai-message__body">{user ? <p>{message.content}</p> : <div className="ai-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown></div>}
-      {message.interrupt && <div className="ai-confirm"><strong>{message.interrupt.title || '请确认这一步'}</strong><p>{message.interrupt.summary || '确认后我会继续处理患者端操作。'}</p>{message.interrupt.processed ? <small>已处理</small> : <div><button onClick={() => onDecision(message.interrupt, 'approve')}>确认继续</button><button className="ghost" onClick={() => onDecision(message.interrupt, 'reject')}>先不用</button></div>}</div>}
-    </div>
+    <div className="ai-message__body">{user ? <p>{message.content}</p> : <div className="ai-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown></div>}</div>
   </div>
 }
 
@@ -171,13 +151,16 @@ function ConversationPanel({ chat, user, onNavigate }) {
   const endRef = useRef(null)
   const active = chat.sessions.find((session) => session.id === chat.activeId)
   const messages = active?.messages || []
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages.length, chat.replying])
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' })
+    return undefined
+  }, [messages.length, chat.replying])
   const submit = () => { if (!input.trim() || chat.replying) return; chat.sendMessage(input); setInput('') }
   const name = user?.realName || user?.username || '朋友'
   return <main className="ai-conversation">
     <header className="ai-conversation__header"><div className="ai-presence"><span className="ai-presence__mark"><IconAI size={18} /></span><div><strong>温润 · 医院智能体</strong><small>患者专属健康与就诊助手</small></div></div><button className="ai-new-chat" onClick={chat.newChat}>＋ 新对话</button></header>
     <div className="ai-thread">
-      {!messages.length ? <div className="ai-welcome"><div className="ai-welcome__orb"><IconLogo size={42} /></div><p className="ai-welcome__kicker">早上好，{name}</p><h1>你可以把身体的困惑，<br /><em>慢慢告诉我。</em></h1><p className="ai-welcome__copy">我能帮你分诊、预约、查看就诊信息和解释报告。每一步都会由你确认，重要决定交给医生。</p><div className="ai-suggestions">{SUGGESTIONS.map((item) => <button key={item} onClick={() => chat.sendMessage(item)}>{item}<span>↗</span></button>)}</div><div className="ai-action-grid">{ACTIONS.map((action) => <ActionCard key={action.id} action={action} onClick={() => onNavigate(action.id === 'view_payment' ? '/payment' : action.id === 'view_appointments' ? '/registration' : '/registration')} />)}</div></div> : <div className="ai-messages">{messages.map((message, index) => <Message key={`${message.role}-${index}`} message={message} onDecision={chat.decide} />)}{chat.replying && !chat.streaming && <div className="ai-typing"><span /><span /><span /> 智能体正在整理信息…</div>}<div ref={endRef} /></div>}
+      {!messages.length ? <div className="ai-welcome"><div className="ai-welcome__orb"><IconLogo size={42} /></div><p className="ai-welcome__kicker">早上好，{name}</p><h1>你可以把身体的困惑，<br /><em>慢慢告诉我。</em></h1><p className="ai-welcome__copy">我能帮你分诊、预约、查看就诊信息和解释报告。每一步都会由你确认，重要决定交给医生。</p><div className="ai-suggestions">{SUGGESTIONS.map((item) => <button key={item} onClick={() => chat.sendMessage(item)}>{item}<span>↗</span></button>)}</div><div className="ai-action-grid">{ACTIONS.map((action) => <ActionCard key={action.id} action={action} onClick={() => onNavigate(action.id === 'view_payment' ? '/payment' : action.id === 'view_appointments' ? '/registration' : '/registration')} />)}</div></div> : <div className="ai-messages">{messages.map((message, index) => <Message key={`${message.role}-${index}`} message={message} />)}{chat.replying && !chat.streaming && <div className="ai-typing"><span /><span /><span /> 智能体正在整理信息…</div>}<div ref={endRef} /></div>}
     </div>
     <footer className="ai-composer"><div className="ai-composer__box"><textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submit() } }} placeholder="描述你的症状，或告诉我你想办理什么…" rows={1} disabled={chat.replying} /><button onClick={submit} disabled={!input.trim() || chat.replying}>{chat.replying ? '…' : '发送 ↗'}</button></div><p>AI 提供健康信息和就诊协助，不替代医生诊断；如遇急症请立即拨打 120 或前往急诊。</p></footer>
   </main>

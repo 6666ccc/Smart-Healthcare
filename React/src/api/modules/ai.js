@@ -2,11 +2,6 @@ export function normalizeChatEvent(event) {
   return event
 }
 
-export async function resumeChat({ conversationId, decision }, requestClient) {
-  const client = requestClient || (await import('../request.js')).default
-  return client.post('/api/ai/chat/resume', { conversationId, decision })
-}
-
 /**
  * 流式 AI 对话（SSE）。
  * @param {{ message: string, conversationId?: string }} payload
@@ -88,9 +83,6 @@ export async function chatStream(payload, handlers = {}) {
         const reply = event.reply || fullReply
         onDone?.(reply)
         return reply
-      }
-      if (event.type === 'interrupt') {
-        return undefined
       }
     }
   }
