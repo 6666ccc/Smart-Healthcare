@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../store'
 import { homePath } from '../utils/portal'
+import { isPatientPortal } from '../features/experience/mode'
 
 /** 未登录 → /login */
 export function RequireAuth() {
@@ -19,11 +20,22 @@ export function GuestOnly() {
 }
 
 /** 限制特定门户访问 */
-export function RequirePortal({ portal }) {
+export function RequirePatient() {
   const { user } = useAuth()
-  const current = user?.portalType || 'patient'
-  if (current !== portal) {
-    return <Navigate to={homePath(current)} replace />
+  if (!isPatientPortal(user)) {
+    return <UnsupportedPortal />
   }
   return <Outlet />
+}
+
+function UnsupportedPortal() {
+  const { logout } = useAuth()
+  return (
+    <main className="portal-notice">
+      <p className="portal-notice__eyebrow">WENRUN CARE</p>
+      <h1>当前版本仅提供患者端服务</h1>
+      <p>请使用患者账号登录，选择 AI 随身诊室或传统自助服务。</p>
+      <button type="button" onClick={logout}>退出登录</button>
+    </main>
+  )
 }

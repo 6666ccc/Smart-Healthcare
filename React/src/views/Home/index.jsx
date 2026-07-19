@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/preserve-manual-memoization, react-hooks/set-state-in-effect -- legacy patient loader intentionally starts after authenticated context is available */
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../store'
@@ -10,6 +11,7 @@ import {
   IconCalendar, IconHospital, IconWallet, IconRecord, IconAI, IconUser,
 } from '../shared'
 import '../shared/views.css'
+import { writeMode, MODE_AGENT } from '../../features/experience/mode'
 
 const QUICK_ACTIONS = [
   { icon: IconCalendar, label: '预约挂号', to: '/registration', color: '#3d5a5c' },
@@ -25,6 +27,7 @@ function QuickAction({ icon: Icon, label, to, color, index }) {
     <Link
       to={to}
       className="view-quick-item"
+      onClick={() => { if (to === '/assistant') writeMode(MODE_AGENT) }}
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <div className="view-quick-item__icon" style={{ background: `${color}12`, color }}>
@@ -338,7 +341,7 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
-  }, [user?.patientId])
+  }, [user?.patientId, user?.userId])
 
   useEffect(() => { loadData() }, [loadData])
 

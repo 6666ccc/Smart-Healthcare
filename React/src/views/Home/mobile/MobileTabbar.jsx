@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { MODE_AGENT, writeMode } from '../../../features/experience/mode'
 
 const IconHome = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -38,6 +39,7 @@ export default function MobileTabbar() {
   const location = useLocation()
 
   return (
+    <>
     <div className="mobile-tabbar">
       {TABS.map((tab) => {
         const Icon = tab.icon
@@ -54,5 +56,7 @@ export default function MobileTabbar() {
         )
       })}
     </div>
+    <Link className="mobile-mode-switch" to="/assistant" onClick={() => writeMode(MODE_AGENT)}>AI 新版 →</Link>
+    </>
   )
 }

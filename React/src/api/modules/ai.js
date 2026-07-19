@@ -1,5 +1,11 @@
+import { toTask } from '../../features/assistant/task.js'
+
 export function normalizeChatEvent(event) {
   return event
+}
+
+export function taskFromChatEvent(event) {
+  return toTask(event?.task)
 }
 
 /**
