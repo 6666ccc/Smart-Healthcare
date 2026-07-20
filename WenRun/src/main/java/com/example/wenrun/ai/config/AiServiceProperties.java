@@ -18,9 +18,6 @@ public class AiServiceProperties {
     /** 聊天接口路径，对应 FastAPI POST /v1/chat */
     private String chatPath = "/v1/chat";
 
-    /** HITL 恢复接口路径，对应 FastAPI POST /v1/chat/resume */
-    private String chatResumePath = "/v1/chat/resume";
-
     /** 流式聊天路径，对应 FastAPI POST /v1/chat/stream */
     private String chatStreamPath = "/v1/chat/stream";
 

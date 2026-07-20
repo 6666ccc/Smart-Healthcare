@@ -19,11 +19,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DrugStockController {
 
-    private final DrugStockService drugStockService;
+  private final DrugStockService drugStockService;
 
-    /** GET /api/drug-stocks — 查询库存列表，lowStockOnly=true 时仅返回低库存药品 */
-    @GetMapping
-    public Result<List<DrugStockVO>> list(@RequestParam(required = false) Boolean lowStockOnly) {
-        return Result.success(drugStockService.list(lowStockOnly));
-    }
+  @GetMapping
+  public Result<List<DrugStockVO>> list(@RequestParam(required = false) Boolean lowStockOnly) {
+    return Result.success(drugStockService.list(lowStockOnly));
+  }
 }

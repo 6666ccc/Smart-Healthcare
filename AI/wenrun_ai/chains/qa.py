@@ -14,8 +14,6 @@ from zoneinfo import ZoneInfo
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
-from langchain.agents.middleware import HumanInTheLoopMiddleware
-from langgraph.checkpoint.memory import InMemorySaver
 
 from wenrun_ai.logging import (
     ToolCallCallbackHandler,
@@ -23,7 +21,6 @@ from wenrun_ai.logging import (
     setup_logging,
 )
 from wenrun_ai.auth_context import wenrun_api_context
-from wenrun_ai.graph.hitl import WRITE_TOOL_POLICIES
 from wenrun_ai.chains.router import Intent, route_intent
 from wenrun_ai.knowledge.retriever import retrieve_knowledge_context
 from wenrun_ai.knowledge.types import KnowledgeBase
@@ -79,7 +76,6 @@ CHAT_SYSTEM_PROMPT = """你是温润医院友善、耐心的聊天助手。
 如果用户转而询问医疗知识或医院服务，请提醒其明确描述需求。"""
 
 _agents: dict[Intent, Any] = {}
-_registration_checkpointer = InMemorySaver()
 _chat_workflow: Any | None = None
 
 
@@ -101,18 +97,11 @@ def build_agent(intent: Intent = Intent.REGISTRATION):
         Intent.REGISTRATION: REGISTRATION_SYSTEM_PROMPT,
         Intent.CHAT: CHAT_SYSTEM_PROMPT,
     }[intent]
-    kwargs: dict[str, Any] = {}
-    if intent is Intent.REGISTRATION:
-        kwargs = {
-            "middleware": [HumanInTheLoopMiddleware(WRITE_TOOL_POLICIES)],
-            "checkpointer": _registration_checkpointer,
-        }
     return create_agent(
         llm,
         tools,
         system_prompt=prompt,
         name=intent.agent_name,
-        **kwargs,
     )
 
 
@@ -304,7 +293,7 @@ def run_chat_execution(
     user_context: str | None = None,
     conversation_id: str | None = None,
 ):
-    """执行聊天，返回执行响应体，包含回复、状态、会话 ID 和中断信息"""
+    """Execute a chat turn through the module-level LangGraph workflow."""
     from wenrun_ai.graph.state import ChatInput
 
     return _get_chat_workflow().invoke(ChatInput(
@@ -317,11 +306,6 @@ def run_chat_execution(
     ))
 
 
-def resume_chat_execution(conversation_id: str, decision: dict[str, Any], *, user_id: int | None = None, api_key: str | None = None):
-    """恢复聊天，返回执行响应体，包含回复、状态、会话 ID 和中断信息"""
-    return _get_chat_workflow().resume(conversation_id, decision, user_id=user_id, api_key=api_key)
-
-# 获取聊天工作流
 def _get_chat_workflow():
     global _chat_workflow
     if _chat_workflow is None: # 如果聊天工作流不存在，则创建一个
@@ -339,7 +323,7 @@ def run_chat(
     user_context: str | None = None,
     conversation_id: str | None = None,
 ) -> str:
-    """Compatibility adapter that never represents a pending write as success."""
+    """Compatibility adapter that returns the completed reply text."""
     execution = run_chat_execution(
         message,
         api_key=api_key,
@@ -348,8 +332,8 @@ def run_chat(
         user_context=user_context,
         conversation_id=conversation_id,
     )
-    if execution.status != "completed" or execution.reply is None:
-        raise RuntimeError("Chat turn is pending human approval; use run_chat_execution.")
+    if execution.reply is None:
+        raise RuntimeError("Chat turn produced no reply.")
     return execution.reply
 
 

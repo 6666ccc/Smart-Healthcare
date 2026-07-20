@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
@@ -99,25 +99,10 @@ class ChatResponse(BaseModel):
 
 
 class ChatExecutionResponse(BaseModel):
-    """Public representation of a completed or approval-pending chat turn."""
+    """Public representation of a completed chat turn."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     reply: str | None = None
-    status: Literal["completed", "pending"]
+    status: Literal["completed"] = "completed"
     conversation_id: str = Field(..., alias="conversationId")
-    interrupts: list[dict[str, Any]] = Field(default_factory=list)
-
-
-class ChatResumeRequest(BaseModel):
-    """Decision submitted by the authenticated principal for a paused turn."""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-    conversation_id: str = Field(..., alias="conversationId", min_length=1)
-    decision: dict[str, Any]
-    api_key: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("apiKey", "api_key"),
-    )
-    user_id: int | None = Field(default=None, alias="userId")

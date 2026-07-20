@@ -65,3 +65,6 @@ application-local.yml
 # ===== Logs =====
 logs
 *.log
+
+# Visual brainstorming artifacts
+.superpowers/

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Literal, TypedDict
 
 from wenrun_ai.chains.router import Intent
@@ -20,11 +20,10 @@ class ChatInput:
 
 @dataclass(frozen=True)
 class ChatExecution:
-    status: Literal["completed", "pending"]
+    status: Literal["completed"]
     conversation_id: str
     reply: str | None = None
     intent: Intent | None = None
-    interrupts: list[dict[str, Any]] = field(default_factory=list)
 
 
 class ChatState(TypedDict, total=False):
@@ -41,6 +40,4 @@ class ChatState(TypedDict, total=False):
     knowledge_context: str | None
     human_message: Any
     reply: str | None
-    status: Literal["completed", "pending"]
-    interrupts: list[dict[str, Any]]
-    decision: dict[str, Any] | None
+    status: Literal["completed"]

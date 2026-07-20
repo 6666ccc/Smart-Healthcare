@@ -16,12 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class DispenseController {
 
-    private final DispenseService dispenseService;
+  private final DispenseService dispenseService;
 
-    /** POST /api/dispense/{prescriptionId} — 对指定处方执行发药 */
-    @PostMapping("/{prescriptionId}")
-    public Result<Void> dispense(@PathVariable Long prescriptionId) {
-        dispenseService.dispense(prescriptionId);
-        return Result.success();
-    }
+  @PostMapping("/{prescriptionId}")
+  public Result<Void> dispense(@PathVariable Long prescriptionId) {
+    dispenseService.dispense(prescriptionId);
+    return Result.success();
+  }
 }

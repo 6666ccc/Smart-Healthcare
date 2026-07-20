@@ -10,17 +10,17 @@ alwaysApply: false
 ## 避免 vs 推荐
 
 ```python
-# ❌ 缩写式黑话（读者不知道「中断字典」指什么）
-def _extract_interrupt_dicts(result) -> list[dict]:
-    """提取中断字典列表。"""
+# ❌ 缩写式黑话（读者不知道「路由结果」指什么）
+def _extract_route(result) -> dict:
+    """提取路由结果。"""
 
 # ✅ 说清楚来源、动作、结果
-def _extract_interrupt_dicts(result) -> list[dict]:
-    """把 LangGraph / HITL 返回的 Interrupt 对象解包为普通 dict 列表。
+def _extract_route(result) -> dict:
+    """把意图路由节点的返回值整理成前端可读的 dict。
 
-    输入：TOOL_AGENT.invoke(version="v2") 的 GraphOutput，可能有 .interrupts
-    输出：[{"action_requests": [...], "review_configs": [...]}, ...]
-    供 _format_interrupts 转成前端可读的 title / summary / details。
+    输入：route_intent(message) 的 IntentRoute 对象
+    输出：{"intent": "registration", "agent": "registration_agent", "confidence": 0.9}
+    供日志与 API 响应序列化使用。
     """
 ```
 

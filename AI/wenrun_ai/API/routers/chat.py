@@ -6,9 +6,9 @@ from fastapi.responses import StreamingResponse
 
 from wenrun_ai.settings import base
 
-from ...chains.qa import resume_chat_execution, run_chat_execution
+from ...chains.qa import run_chat_execution
 from ..user_context import build_user_context_block
-from ..schemas import ChatExecutionResponse, ChatRequest, ChatResumeRequest
+from ..schemas import ChatExecutionResponse, ChatRequest
 
 router = APIRouter()
 api_logger = logging.getLogger("wenrun_ai.api")
@@ -35,7 +35,6 @@ def _execution_response(execution) -> ChatExecutionResponse:
         reply=execution.reply,
         status=execution.status,
         conversation_id=execution.conversation_id,
-        interrupts=execution.interrupts,
     )
 
 
@@ -94,29 +93,6 @@ def post_chat(body: ChatRequest, request: Request) -> ChatExecutionResponse:
     return _execution_response(execution)
 
 
-@router.post("/chat/resume", response_model=ChatExecutionResponse)
-def post_chat_resume(
-    body: ChatResumeRequest, request: Request
-) -> ChatExecutionResponse:
-    api_key, _source = _resolve_api_key(body)
-    try:
-        execution = resume_chat_execution(
-            body.conversation_id,
-            body.decision,
-            user_id=body.user_id,
-            api_key=api_key,
-        )
-    except LookupError as exc:
-        api_logger.info(
-            "POST /v1/chat/resume checkpoint not found | conversation_id=%s",
-            body.conversation_id,
-        )
-        raise HTTPException(status_code=404, detail="未找到可恢复的会话。") from exc
-    except Exception as exc:
-        _raise_execution_error("POST /v1/chat/resume", exc)
-    return _execution_response(execution)
-
-
 @router.post("/chat/stream")
 async def post_chat_stream(body: ChatRequest, request: Request) -> StreamingResponse:
     """SSE 流式聊天：data 行为 JSON，type 为 status / token / done。"""
@@ -146,18 +122,11 @@ async def post_chat_stream(body: ChatRequest, request: Request) -> StreamingResp
                 user_context=user_context,
                 conversation_id=body.conversation_id,
             )
-            if execution.status == "pending":
-                event = {
-                    "type": "interrupt",
-                    "conversationId": execution.conversation_id,
-                    "interrupts": execution.interrupts,
-                }
-            else:
-                event = {
-                    "type": "done",
-                    "reply": execution.reply or "",
-                    "conversationId": execution.conversation_id,
-                }
+            event = {
+                "type": "done",
+                "reply": execution.reply or "",
+                "conversationId": execution.conversation_id,
+            }
             yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception:
             api_logger.exception("POST /v1/chat/stream failed")

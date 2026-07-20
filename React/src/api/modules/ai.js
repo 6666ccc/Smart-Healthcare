@@ -1,10 +1,11 @@
+import { toTask } from '../../features/assistant/task.js'
+
 export function normalizeChatEvent(event) {
   return event
 }
 
-export async function resumeChat({ conversationId, decision }, requestClient) {
-  const client = requestClient || (await import('../request.js')).default
-  return client.post('/api/ai/chat/resume', { conversationId, decision })
+export function taskFromChatEvent(event) {
+  return toTask(event?.task)
 }
 
 /**
@@ -88,9 +89,6 @@ export async function chatStream(payload, handlers = {}) {
         const reply = event.reply || fullReply
         onDone?.(reply)
         return reply
-      }
-      if (event.type === 'interrupt') {
-        return undefined
       }
     }
   }

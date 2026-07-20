@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect -- legacy patient loader intentionally updates state after the authenticated context resolves */
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../store'
 import { useIsPc, useLogout } from '../../hooks'

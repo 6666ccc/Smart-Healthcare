@@ -5,6 +5,7 @@ import {
   IconLogo, IconHome, IconCalendar, IconHospital, IconWallet, IconUser, IconAI, IconLogout,
 } from '../../shared'
 import '../../shared/views.css'
+import { MODE_AGENT, writeMode } from '../../../features/experience/mode'
 
 const NAV_ITEMS = [
   { to: '/home',         icon: IconHome,      label: '首页' },
@@ -19,6 +20,10 @@ export default function PcLayout({ children }) {
   const location = useLocation()
   const navigate = useNavigate()
   const logout = useLogout()
+  const switchAgent = () => {
+    writeMode(MODE_AGENT)
+    navigate('/assistant')
+  }
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/')
 
@@ -110,8 +115,8 @@ export default function PcLayout({ children }) {
             温润诊所 · 患者自助服务
           </div>
           <div style={{ flex: 1 }} />
-          <button onClick={() => navigate('/assistant')} className="btn btn--outline btn--sm">
-            AI 咨询
+          <button onClick={switchAgent} className="btn btn--outline btn--sm">
+            AI 新版
           </button>
           <div className="view-avatar-ring" style={{ width: 36, height: 36, margin: 0, padding: 2 }}>
             <div className="view-avatar-ring__inner" style={{ fontSize: 14 }}>

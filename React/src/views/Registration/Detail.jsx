@@ -42,7 +42,7 @@ export default function RegistrationDetail() {
       } catch (e) { setError(e.message) }
       finally { setLoading(false) }
     })()
-  }, [id, user?.patientId])
+  }, [id, user?.userId])
 
   // 加载关联处方和检查
   useEffect(() => {

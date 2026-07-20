@@ -1,4 +1,4 @@
-"""Public HTTP contract for graph-backed chat and HITL resumption."""
+"""Public HTTP contract for graph-backed chat."""
 
 from __future__ import annotations
 
@@ -25,35 +25,12 @@ def client() -> TestClient:
     return TestClient(app)
 
 
-def execution(*, status="completed", reply="hello", conversation_id="a", interrupts=None):
+def execution(*, status="completed", reply="hello", conversation_id="a"):
     return SimpleNamespace(
         status=status,
         reply=reply,
         conversation_id=conversation_id,
-        interrupts=interrupts or [],
     )
-
-
-def test_chat_returns_pending_hitl_contract(monkeypatch):
-    interrupt = {"type": "approve", "tool": "create_registration"}
-    monkeypatch.setattr(
-        chat,
-        "run_chat_execution",
-        lambda _message, **_kwargs: execution(status="pending", reply=None, interrupts=[interrupt]),
-    )
-
-    response = client().post(
-        "/v1/chat",
-        json={"message": "帮我挂号", "conversationId": "a", "apiKey": "secret"},
-    )
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "reply": None,
-        "status": "pending",
-        "conversationId": "a",
-        "interrupts": [interrupt],
-    }
 
 
 def test_chat_returns_completed_reply(monkeypatch):
@@ -66,47 +43,7 @@ def test_chat_returns_completed_reply(monkeypatch):
         "reply": "已为您查询",
         "status": "completed",
         "conversationId": "a",
-        "interrupts": [],
     }
-
-
-def test_resume_uses_request_principal_and_returns_completed_execution(monkeypatch):
-    calls = []
-
-    def resume(conversation_id, decision, *, user_id=None, api_key=None):
-        calls.append((conversation_id, decision, user_id, api_key))
-        return execution(reply="挂号已确认")
-
-    monkeypatch.setattr(chat, "resume_chat_execution", resume)
-
-    response = client().post(
-        "/v1/chat/resume",
-        json={
-            "conversationId": "a",
-            "decision": {"type": "approve"},
-            "userId": 7,
-            "apiKey": "secret",
-        },
-    )
-
-    assert response.status_code == 200
-    assert response.json()["reply"] == "挂号已确认"
-    assert calls == [("a", {"type": "approve"}, 7, "secret")]
-
-
-def test_stream_pending_emits_interrupt_without_done(monkeypatch):
-    interrupt = {"type": "approve", "tool": "create_registration"}
-    monkeypatch.setattr(
-        chat,
-        "run_chat_execution",
-        lambda _message, **_kwargs: execution(status="pending", reply=None, interrupts=[interrupt]),
-    )
-
-    response = client().post("/v1/chat/stream", json={"message": "帮我挂号", "conversationId": "a"})
-
-    assert response.status_code == 200
-    events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")]
-    assert events == [{"type": "interrupt", "conversationId": "a", "interrupts": [interrupt]}]
 
 
 def test_stream_completed_emits_done(monkeypatch):
@@ -116,33 +53,3 @@ def test_stream_completed_emits_done(monkeypatch):
 
     events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")]
     assert events == [{"type": "done", "reply": "完成", "conversationId": "a"}]
-
-
-def test_resume_missing_checkpoint_is_a_client_error(monkeypatch):
-    def resume(*_args, **_kwargs):
-        raise LookupError("missing workflow")
-
-    monkeypatch.setattr(chat, "resume_chat_execution", resume)
-
-    response = client().post(
-        "/v1/chat/resume",
-        json={"conversationId": "missing", "decision": {"type": "approve"}},
-    )
-
-    assert response.status_code in {404, 409}
-    assert "missing workflow" not in response.text
-
-
-def test_resume_invalid_decision_is_a_bad_request(monkeypatch):
-    def resume(*_args, **_kwargs):
-        raise ValueError("unsupported decision")
-
-    monkeypatch.setattr(chat, "resume_chat_execution", resume)
-
-    response = client().post(
-        "/v1/chat/resume",
-        json={"conversationId": "pending", "decision": {"action": "approve"}},
-    )
-
-    assert response.status_code == 400
-    assert "unsupported decision" not in response.text
