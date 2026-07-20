@@ -7,3 +7,5 @@ public interface ChatStreamConsumer {
 
     void accept(ChatStreamEventVO event);
 }
+
+

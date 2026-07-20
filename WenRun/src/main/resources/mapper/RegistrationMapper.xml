@@ -4,6 +4,7 @@
 <mapper namespace="com.example.wenrun.mapper.RegistrationMapper">
     <select id="selectList" resultType="com.example.wenrun.vo.RegistrationVO">
         SELECT r.id, r.reg_no AS regNo, r.patient_id AS patientId, p.name AS patientName,
+        r.schedule_id AS scheduleId,
         r.dept_id AS deptId, d.dept_name AS deptName,
         r.staff_id AS staffId, s.name AS staffName,
         sc.work_date AS workDate, sc.time_period AS timePeriod,
@@ -38,5 +39,11 @@
     <update id="updateStatus">
         UPDATE registration SET status = #{status} WHERE id = #{id}
     </update>
+    <select id="countActiveByPatientAndSchedule" resultType="int">
+        SELECT COUNT(*) FROM registration
+        WHERE patient_id = #{patientId}
+          AND schedule_id = #{scheduleId}
+          AND status = #{status}
+    </select>
 
 </mapper>

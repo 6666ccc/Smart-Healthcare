@@ -10,17 +10,22 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 科室服务实现
+ */
 @Service
 @RequiredArgsConstructor
 public class DeptServiceImpl implements DeptService {
 
     private final DeptMapper deptMapper;
 
+    /** 按状态查询科室列表 */
     @Override
     public List<Dept> list(Integer status) {
         return deptMapper.selectAll(status);
     }
 
+    /** 根据 ID 查询科室 */
     @Override
     public Dept getById(Long id) {
         Dept dept = deptMapper.selectById(id);
@@ -30,6 +35,7 @@ public class DeptServiceImpl implements DeptService {
         return dept;
     }
 
+    /** 新建科室，默认启用且 parentId=0 表示顶级 */
     @Override
     public Long create(Dept dept) {
         if (dept.getStatus() == null) {
@@ -42,6 +48,7 @@ public class DeptServiceImpl implements DeptService {
         return dept.getId();
     }
 
+    /** 更新科室信息 */
     @Override
     public void update(Dept dept) {
         getById(dept.getId());

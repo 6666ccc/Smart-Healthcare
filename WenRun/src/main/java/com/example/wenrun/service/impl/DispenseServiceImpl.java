@@ -19,6 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 发药服务实现 — 扣减库存并记录发药
+ */
 @Service
 @RequiredArgsConstructor
 public class DispenseServiceImpl implements DispenseService {
@@ -28,6 +31,7 @@ public class DispenseServiceImpl implements DispenseService {
     private final DrugStockMapper drugStockMapper;
     private final DispenseRecordMapper dispenseRecordMapper;
 
+    /** 对已缴费处方执行发药：校验库存、扣减数量、写入发药记录 */
     @Override
     @Transactional
     public void dispense(Long prescriptionId) {
@@ -40,6 +44,9 @@ public class DispenseServiceImpl implements DispenseService {
         }
         if (dispenseRecordMapper.selectByPrescriptionId(prescriptionId) != null) {
             throw new BusinessException("处方已发药");
+        }
+        if (prescriptionMapper.updateStatusIfCurrent(prescriptionId, BizStatus.RX_PAID, BizStatus.RX_DISPENSED) == 0) {
+            throw new BusinessException("Prescription already dispensed");
         }
         List<PrescriptionItem> items = prescriptionItemMapper.selectByPrescriptionId(prescriptionId);
         for (PrescriptionItem item : items) {
@@ -58,6 +65,5 @@ public class DispenseServiceImpl implements DispenseService {
         record.setDispenseTime(LocalDateTime.now());
         record.setStatus(BizStatus.ENABLED);
         dispenseRecordMapper.insert(record);
-        prescriptionMapper.updateStatus(prescriptionId, BizStatus.RX_DISPENSED);
     }
 }

@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 挂号接口 — 预约、退号与待就诊查询
+ */
 @RestController
 @RequestMapping("/api/registrations")
 @RequiredArgsConstructor
@@ -20,19 +23,19 @@ public class RegistrationController {
     private final RegistrationService registrationService;
     private final CurrentStaffSupport currentStaffSupport;
 
-    // 查询挂号列表
+    /** GET /api/registrations — 查询挂号列表（医生端自动按当前登录医生过滤） */
     @GetMapping
     public Result<List<RegistrationVO>> list(@RequestParam(required = false) Long patientId,
-                                             @RequestParam(required = false) Long userId,
-                                             @RequestParam(required = false) Long registrantUserId,
-                                             @RequestParam(required = false) Long staffId,
-                                             @RequestParam(required = false) Integer status) {
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Long registrantUserId,
+            @RequestParam(required = false) Long staffId,
+            @RequestParam(required = false) Integer status) {
         Long effectiveStaffId = currentStaffSupport.resolveStaffId(staffId);
         return Result.success(registrationService.list(
                 patientId, userId, registrantUserId, effectiveStaffId, status));
     }
 
-    // 查询待就诊挂号（医生端：自动按当前登录医生过滤）
+    /** GET /api/registrations/pending — 查询待就诊挂号（医生端自动过滤） */
     @GetMapping("/pending")
     public Result<List<RegistrationVO>> pending(@RequestParam(required = false) Long staffId) {
         Long effectiveStaffId = currentStaffSupport.resolveStaffId(staffId);
@@ -40,13 +43,13 @@ public class RegistrationController {
                 null, null, null, effectiveStaffId, BizStatus.REG_REGISTERED));
     }
 
-    // 挂号
+    /** POST /api/registrations — 患者挂号 */
     @PostMapping
     public Result<Long> register(@Valid @RequestBody RegistrationCreateDTO dto) {
         return Result.success(registrationService.register(dto));
     }
 
-    // 取消挂号
+    /** POST /api/registrations/{id}/cancel — 退号 */
     @PostMapping("/{id}/cancel")
     public Result<Void> cancel(@PathVariable Long id) {
         registrationService.cancel(id);

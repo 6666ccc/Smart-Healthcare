@@ -34,6 +34,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -43,22 +45,16 @@ import java.util.concurrent.CompletableFuture;
 public class AiChatController {
 
     private final AiChatService aiChatService;
-    private final AuthTokenStore authTokenStore;
+    private final JwtProperties jwtProperties;
     private final SysUserMapper sysUserMapper;
-    private final StaffMapper staffMapper;
     private final PatientMapper patientMapper;
     private final ChatMessageMapper chatMessageMapper;
     private final AiServiceProperties aiServiceProperties;
 
     @PostMapping("/chat")
     public Result<ChatResponseVO> chat(@Valid @RequestBody ChatRequestDTO dto, HttpServletRequest request) {
-        String token = resolveToken(request);
-        enrichContext(dto, token);
-        dto.setApiKey(aiServiceProperties.getApiKey());
-
-        // 保存用户消息到 chat_messages（供前端回显 & 审计）
+        enrichContext(dto, resolveToken(request));
         saveMessage(dto.getConversationId(), dto.getUserId(), "user", dto.getMessage());
-
         ChatResponseVO response = aiChatService.chat(dto);
 
         // 保存 AI 回复到 chat_messages
@@ -95,10 +91,7 @@ public class AiChatController {
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(@Valid @RequestBody ChatRequestDTO dto, HttpServletRequest request) {
-        String token = resolveToken(request);
-        enrichContext(dto, token);
-        dto.setApiKey(aiServiceProperties.getApiKey());
-
+        enrichContext(dto, resolveToken(request));
         saveMessage(dto.getConversationId(), dto.getUserId(), "user", dto.getMessage());
 
         long timeoutMs = aiServiceProperties.getStreamReadTimeout().toMillis();
@@ -112,18 +105,15 @@ public class AiChatController {
             boolean[] interrupted = {false};
             try {
                 aiChatService.streamChat(dto, event -> {
-                    if (event == null || event.getType() == null) {
-                        return;
-                    }
+                    if (event == null || event.getType() == null) return;
                     try {
                         if ("error".equals(event.getType())) {
-                            emitter.send(SseEmitter.event().name("error").data(event.getContent()));
-                            emitter.completeWithError(new AiServiceException(
-                                    event.getContent() != null ? event.getContent() : "AI 流式服务异常"));
+                            String errorContent = Objects.requireNonNullElse(event.getContent(), "AI 流式服务异常");
+                            emitter.send(SseEmitter.event().name("error").data(errorContent));
+                            emitter.completeWithError(new AiServiceException(errorContent));
                             completed[0] = true;
                             return;
                         }
-
                         emitter.send(SseEmitter.event().data(event));
 
                         if ("interrupt".equals(event.getType())) {
@@ -136,11 +126,9 @@ public class AiChatController {
                         if ("token".equals(event.getType()) && event.getContent() != null) {
                             fullReply.append(event.getContent());
                         }
-
                         if ("done".equals(event.getType())) {
                             String reply = StringUtils.hasText(event.getReply())
-                                    ? event.getReply()
-                                    : fullReply.toString();
+                                    ? event.getReply() : fullReply.toString();
                             saveMessage(dto.getConversationId(), dto.getUserId(), "assistant", reply);
                             emitter.complete();
                             completed[0] = true;
@@ -149,7 +137,6 @@ public class AiChatController {
                         throw new AiServiceException("SSE 推送失败", ex);
                     }
                 });
-
                 if (!completed[0]) {
                     if (!interrupted[0] && !fullReply.isEmpty()) {
                         saveMessage(dto.getConversationId(), dto.getUserId(), "assistant", fullReply.toString());
@@ -158,22 +145,63 @@ public class AiChatController {
                 }
             } catch (Exception ex) {
                 log.warn("AI 流式聊天失败: {}", ex.getMessage());
-                try {
-                    emitter.send(SseEmitter.event().name("error").data(ex.getMessage()));
-                } catch (IOException ignored) {
-                    // ignore secondary failure
-                }
+                try { emitter.send(SseEmitter.event().name("error").data(Objects.requireNonNullElse(ex.getMessage(), "AI 流式聊天失败"))); } catch (IOException ignored) {}
                 emitter.completeWithError(ex);
             }
         });
-
         return emitter;
     }
 
-    private void saveMessage(String conversationId, Long userId, String role, String content) {
-        if (conversationId == null || content == null) {
+    @PostMapping("/java/chat")
+    public Result<JavaChatResponseVO> javaChat(@RequestBody JavaChatRequestDTO dto, HttpServletRequest request) {
+        enrichJavaChatContext(dto, resolveToken(request));
+        saveMessage(dto.getSessionId(), parseUserId(dto.getUserId()), "user", dto.getContent());
+        JavaChatResponseVO result = aiChatService.javaChat(dto);
+        saveJavaChatAssistantMessage(dto.getSessionId(), dto.getUserId(), result);
+        return Result.success(result);
+    }
+
+    private void saveJavaChatAssistantMessage(String sessionId, String userId, JavaChatResponseVO result) {
+        if (result == null || result.getFinalOutput() == null) {
             return;
         }
+        saveMessage(sessionId, parseUserId(userId), "assistant", result.getFinalOutput());
+    }
+
+    private Long parseUserId(String userId) {
+        if (!StringUtils.hasText(userId)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(userId.trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private void enrichJavaChatContext(JavaChatRequestDTO dto, String token) {
+        if (!StringUtils.hasText(token)) return;
+        try {
+            JWTClaimsSet claims = JwtUtil.verifyAndParse(token, jwtProperties.getSecret());
+            Long userId = JwtUtil.getUserId(claims);
+            if (userId != null) dto.setUserId(String.valueOf(userId));
+            dto.setExtra(enrichExtraWithToken(dto.getExtra(), token, claims));
+        } catch (Exception ignored) {}
+    }
+
+    private Map<String, Object> enrichExtraWithToken(
+            Map<String, Object> extra, String token, JWTClaimsSet claims) {
+        Map<String, Object> resolved = extra != null ? extra : new java.util.HashMap<>();
+        resolved.put("access_token", token);
+        Long patientId = JwtUtil.getLongClaim(claims, "patient_id");
+        if (patientId != null) resolved.put("patient_id", patientId);
+        Long staffId = JwtUtil.getLongClaim(claims, "staff_id");
+        if (staffId != null) resolved.put("staff_id", staffId);
+        return resolved;
+    }
+
+    private void saveMessage(String conversationId, Long userId, String role, String content) {
+        if (conversationId == null || content == null) return;
         try {
             ChatMessage msg = new ChatMessage();
             msg.setConversationId(conversationId);
@@ -181,60 +209,37 @@ public class AiChatController {
             msg.setRole(role);
             msg.setContent(content);
             chatMessageMapper.insert(msg);
-        } catch (Exception e) {
-            log.warn("保存聊天消息失败 (conversationId={}, role={}): {}",
-                    conversationId, role, e.getMessage());
-        }
+        } catch (Exception e) { log.warn("保存聊天消息失败: {}", e.getMessage()); }
     }
 
     private void enrichContext(ChatRequestDTO dto, String token) {
-        Long userId = authTokenStore.getUserId(token);
-        if (userId == null) {
-            return;
-        }
+        if (!StringUtils.hasText(token)) return;
+        JWTClaimsSet claims;
+        try { claims = JwtUtil.verifyAndParse(token, jwtProperties.getSecret()); }
+        catch (Exception e) { return; }
 
-        SysUser user = sysUserMapper.selectById(userId);
-        if (user == null) {
-            return;
-        }
-
+        Long userId = JwtUtil.getUserId(claims);
         dto.setUserId(userId);
-        dto.setUsername(user.getUsername());
-        dto.setRealName(user.getRealName());
-
-        List<SysRole> roles = sysUserMapper.selectRolesByUserId(userId);
-        SysRole primary = LoginAssembler.pickPrimaryRole(roles);
-        String portalType = LoginAssembler.resolvePortalType(user, primary);
-        dto.setPortalType(portalType);
-        if (primary != null) {
-            dto.setRoleCode(primary.getRoleCode());
-        }
-
-        String accountType = user.getAccountType();
-        if (!StringUtils.hasText(accountType)) {
-            accountType = AccountType.INTERNAL;
-        }
-
-        if (AccountType.STAFF.equals(accountType)) {
-            Staff staff = staffMapper.selectByUserId(userId);
-            if (staff != null) {
-                dto.setStaffId(staff.getId());
-            }
-        }
-
-        if (AccountType.PATIENT.equals(accountType)) {
+        dto.setUsername(JwtUtil.getStringClaim(claims, "username"));
+        dto.setPortalType(JwtUtil.getStringClaim(claims, "portal_type"));
+        List<String> roles = JwtUtil.getStringListClaim(claims, "roles");
+        if (!roles.isEmpty()) dto.setRoleCode(roles.get(0));
+        Long staffId = JwtUtil.getLongClaim(claims, "staff_id");
+        if (staffId != null) dto.setStaffId(staffId);
+        Long patientId = JwtUtil.getLongClaim(claims, "patient_id");
+        if (patientId != null) {
+            dto.setPatientId(patientId);
             Patient patient = patientMapper.selectByUserId(userId);
             if (patient != null) {
-                dto.setPatientId(patient.getId());
                 dto.setPatientNo(patient.getPatientNo());
                 dto.setPatientName(patient.getName());
                 dto.setPatientGender(patient.getGender());
-                if (patient.getBirthDate() != null) {
-                    dto.setPatientBirthDate(patient.getBirthDate().toString());
-                }
+                if (patient.getBirthDate() != null) dto.setPatientBirthDate(patient.getBirthDate().toString());
                 dto.setPatientAllergyHistory(patient.getAllergyHistory());
             }
         }
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user != null) dto.setRealName(user.getRealName());
     }
 
     /**
@@ -273,9 +278,7 @@ public class AiChatController {
 
     private String resolveToken(HttpServletRequest request) {
         String auth = request.getHeader("Authorization");
-        if (StringUtils.hasText(auth) && auth.startsWith("Bearer ")) {
-            return auth.substring(7);
-        }
+        if (StringUtils.hasText(auth) && auth.startsWith("Bearer ")) return auth.substring(7);
         return request.getHeader("X-Token");
     }
 }

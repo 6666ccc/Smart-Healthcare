@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 药品库存接口
+ */
 @RestController
 @RequestMapping("/api/drug-stocks")
 @RequiredArgsConstructor
@@ -18,6 +21,7 @@ public class DrugStockController {
 
     private final DrugStockService drugStockService;
 
+    /** GET /api/drug-stocks — 查询库存列表，lowStockOnly=true 时仅返回低库存药品 */
     @GetMapping
     public Result<List<DrugStockVO>> list(@RequestParam(required = false) Boolean lowStockOnly) {
         return Result.success(drugStockService.list(lowStockOnly));

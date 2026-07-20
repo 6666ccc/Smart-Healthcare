@@ -29,6 +29,7 @@ public class UserController {
         return Result.success();
     }
 
+    /** 从请求头解析 Token 并获取当前用户 ID */
     private Long resolveUserId(HttpServletRequest request) {
         String auth = request.getHeader("Authorization");
         if (StringUtils.hasText(auth) && auth.startsWith("Bearer ")) {

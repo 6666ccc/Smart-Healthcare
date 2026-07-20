@@ -14,6 +14,7 @@ public class RegistrationVO {
     private String regNo;
     private Long patientId;
     private String patientName;
+    private Long scheduleId;
     private Long deptId;
     private String deptName;
     private Long staffId;

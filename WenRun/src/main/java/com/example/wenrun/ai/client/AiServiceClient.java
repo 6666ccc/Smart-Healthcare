@@ -24,7 +24,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
- * AI 服务客户端，调用 Python FastAPI（聊天、健康检查）。
+ * AI 服务客户端，调用 Python FastAPI（/v1/chat 聊天、健康检查）。
+ * <p>
+ * Java 集成聊天见 {@link JavaAiClient}。
  */
 @Slf4j
 @Component
@@ -67,7 +69,7 @@ public class AiServiceClient {
                     .body(request)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (req, res) -> {
-                        String detail = readBody(res.getBody());
+                        String detail = AiClientSupport.readBody(res.getBody());
                         throw new AiServiceException(
                                 "AI 服务响应异常: HTTP " + res.getStatusCode().value()
                                         + (detail.isEmpty() ? "" : " - " + detail));
@@ -136,7 +138,7 @@ public class AiServiceClient {
                     .body(request)
                     .exchange((req, res) -> {
                         if (res.getStatusCode().isError()) {
-                            String detail = readBody(res.getBody());
+                            String detail = AiClientSupport.readBody(res.getBody());
                             throw new AiServiceException(
                                     "AI 流式服务响应异常: HTTP " + res.getStatusCode().value()
                                             + (detail.isEmpty() ? "" : " - " + detail));
@@ -194,17 +196,6 @@ public class AiServiceClient {
         } catch (RestClientException ex) {
             log.debug("AI 服务不可用: {}", ex.getMessage());
             return false;
-        }
-    }
-
-    private static String readBody(java.io.InputStream body) {
-        if (body == null) {
-            return "";
-        }
-        try (body) {
-            return new String(body.readAllBytes(), StandardCharsets.UTF_8).trim();
-        } catch (Exception ex) {
-            return "";
         }
     }
 }

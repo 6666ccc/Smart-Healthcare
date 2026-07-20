@@ -27,6 +27,9 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 处方服务实现 — 开方、查询与作废
+ */
 @Service
 @RequiredArgsConstructor
 public class PrescriptionServiceImpl implements PrescriptionService {
@@ -38,6 +41,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private final PatientMapper patientMapper;
     private final CurrentStaffSupport currentStaffSupport;
 
+    /** 查询某次就诊下的所有处方 */
     @Override
     public List<PrescriptionVO> listByVisit(Long visitId) {
         return prescriptionMapper.selectByVisitId(visitId).stream()
@@ -45,6 +49,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .toList();
     }
 
+    /** 查询已缴费、待发药的处方列表 */
     @Override
     public List<PrescriptionVO> listPendingDispense() {
         return prescriptionMapper.selectByStatus(BizStatus.RX_PAID).stream()
@@ -52,6 +57,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .toList();
     }
 
+    /** 根据 ID 查询处方详情（含明细） */
     @Override
     public PrescriptionVO getById(Long id) {
         Prescription rx = prescriptionMapper.selectById(id);
@@ -61,6 +67,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         return toVo(rx);
     }
 
+    /** 为就诊开具处方，计算金额并写入明细 */
     @Override
     @Transactional
     public Long create(PrescriptionCreateDTO dto) {
@@ -101,6 +108,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         return rx.getId();
     }
 
+    /** 作废待缴费处方 */
     @Override
     public void cancel(Long id) {
         Prescription rx = prescriptionMapper.selectById(id);
@@ -110,6 +118,11 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         if (rx.getStatus() != BizStatus.RX_PENDING_PAY) {
             throw new BusinessException("仅待缴费处方可作废");
         }
+        OutpatientVisit visit = visitMapper.selectById(rx.getVisitId());
+        if (visit == null) {
+            throw new BusinessException("就诊记录不存在");
+        }
+        currentStaffSupport.assertOwnsStaff(visit.getStaffId());
         prescriptionMapper.updateStatus(id, BizStatus.RX_CANCELLED);
     }
 

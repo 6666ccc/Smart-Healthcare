@@ -17,6 +17,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 检查申请服务实现 — 医生开具检查单
+ */
 @Service
 @RequiredArgsConstructor
 public class ExamServiceImpl implements ExamService {
@@ -26,11 +29,13 @@ public class ExamServiceImpl implements ExamService {
     private final MedicalItemMapper medicalItemMapper;
     private final CurrentStaffSupport currentStaffSupport;
 
+    /** 查询某次就诊下的检查申请列表 */
     @Override
     public List<ExamRequest> listByVisit(Long visitId) {
         return examRequestMapper.selectByVisitId(visitId);
     }
 
+    /** 为就诊创建检查申请，状态为待缴费 */
     @Override
     public Long create(ExamRequestCreateDTO dto) {
         OutpatientVisit visit = visitMapper.selectById(dto.getVisitId());

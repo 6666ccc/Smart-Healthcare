@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 医护人员服务实现
+ */
 @Service
 @RequiredArgsConstructor
 public class StaffServiceImpl implements StaffService {
@@ -19,11 +22,13 @@ public class StaffServiceImpl implements StaffService {
     private final StaffMapper staffMapper;
     private final DeptMapper deptMapper;
 
+    /** 按科室与状态查询医护人员列表 */
     @Override
     public List<StaffVO> list(Long deptId, Integer status) {
         return staffMapper.selectList(deptId, status);
     }
 
+    /** 根据 ID 查询医护人员 */
     @Override
     public Staff getById(Long id) {
         Staff staff = staffMapper.selectById(id);
@@ -33,6 +38,7 @@ public class StaffServiceImpl implements StaffService {
         return staff;
     }
 
+    /** 新建医护人员，校验所属科室存在 */
     @Override
     public Long create(Staff staff) {
         if (deptMapper.selectById(staff.getDeptId()) == null) {
@@ -45,6 +51,7 @@ public class StaffServiceImpl implements StaffService {
         return staff.getId();
     }
 
+    /** 更新医护人员信息 */
     @Override
     public void update(Staff staff) {
         getById(staff.getId());

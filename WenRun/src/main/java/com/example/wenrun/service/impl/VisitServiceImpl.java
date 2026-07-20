@@ -18,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 门诊就诊服务实现 — 接诊、病历填写与完诊
+ */
 @Service
 @RequiredArgsConstructor
 public class VisitServiceImpl implements VisitService {
@@ -26,11 +29,13 @@ public class VisitServiceImpl implements VisitService {
     private final RegistrationMapper registrationMapper;
     private final CurrentStaffSupport currentStaffSupport;
 
+    /** 按状态与医生查询就诊记录列表 */
     @Override
     public List<VisitVO> list(Integer status, Long staffId) {
         return visitMapper.selectList(status, staffId);
     }
 
+    /** 查询就诊详情，校验当前医生权限 */
     @Override
     public VisitVO getById(Long id) {
         VisitVO vo = visitMapper.selectVoById(id);
@@ -41,6 +46,7 @@ public class VisitServiceImpl implements VisitService {
         return vo;
     }
 
+    /** 根据挂号单开始接诊，创建就诊记录并更新挂号状态 */
     @Override
     @Transactional
     public Long startVisit(Long registrationId) {
@@ -68,6 +74,7 @@ public class VisitServiceImpl implements VisitService {
         return visit.getId();
     }
 
+    /** 更新主诉、诊断；complete=true 时标记为已完诊 */
     @Override
     public void updateVisit(Long id, VisitUpdateDTO dto) {
         OutpatientVisit visit = visitMapper.selectById(id);

@@ -132,9 +132,9 @@ create table sys_user
     constraint username
         unique (username),
     constraint chk_user_account_type
-        check (`account_type` in (_utf8mb4'internal', _utf8mb4'staff', _utf8mb4'patient'))
+        check (`account_type` in (_utf8mb4\'internal\',_utf8mb4\'staff\',_utf8mb4\'patient\'))
 )
-    comment '系统登录账号（PC/手机共用）';
+comment '系统登录账号（PC/手机共用）';
 
 create table patient
 (
@@ -261,9 +261,9 @@ create table registration
     reg_fee            decimal(10, 2) default 0.00              not null comment '挂号费',
     status             tinyint        default 1                 not null comment '1已挂号 2已就诊 3已退号',
     cashier_id         bigint                                   null comment '收费员用户 ID（现场挂号时填写）',
-    registrant_user_id bigint                                   null comment '挂号人用户 ID（谁帮忙挂的号，前端查自己的+帮别人挂的）',
     create_time        datetime       default CURRENT_TIMESTAMP not null comment '创建时间',
     update_time        datetime       default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    registrant_user_id bigint                                   null comment '挂号人用户 ID（谁帮忙挂的号，前端查自己的+帮别人挂的）',
     constraint reg_no
         unique (reg_no),
     constraint fk_reg_patient
@@ -443,3 +443,16 @@ create table sys_user_role
         foreign key (user_id) references sys_user (id)
 )
     comment '用户-角色（RBAC 权限）';
+
+create table oauth_token_blacklist
+(
+    id          bigint auto_increment
+        primary key,
+    jti         varchar(64)                        not null comment 'JWT ID',
+    expires_at  datetime                           not null comment '与 access token 同步过期，便于清理',
+    create_time datetime default CURRENT_TIMESTAMP null,
+    constraint uk_blacklist_jti
+        unique (jti)
+)
+    comment 'JWT 登出黑名单';
+
