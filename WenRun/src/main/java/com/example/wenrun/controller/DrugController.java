@@ -13,28 +13,28 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DrugController {
 
-    private final DrugService drugService;
+  private final DrugService drugService;
 
-    @GetMapping
-    public Result<List<Drug>> list(@RequestParam(required = false) String keyword,
-                                   @RequestParam(required = false) Integer status) {
-        return Result.success(drugService.list(keyword, status));
-    }
+  @GetMapping
+  public Result<List<Drug>> list(@RequestParam(required = false) String keyword,
+      @RequestParam(required = false) Integer status) {
+    return Result.success(drugService.list(keyword, status));
+  }
 
-    @GetMapping("/{id}")
-    public Result<Drug> get(@PathVariable Long id) {
-        return Result.success(drugService.getById(id));
-    }
+  @GetMapping("/{id}")
+  public Result<Drug> get(@PathVariable Long id) {
+    return Result.success(drugService.getById(id));
+  }
 
-    @PostMapping
-    public Result<Long> create(@RequestBody Drug drug) {
-        return Result.success(drugService.create(drug));
-    }
+  @PostMapping
+  public Result<Long> create(@RequestBody Drug drug) {
+    return Result.success(drugService.create(drug));
+  }
 
-    @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody Drug drug) {
-        drug.setId(id);
-        drugService.update(drug);
-        return Result.success();
-    }
+  @PutMapping("/{id}")
+  public Result<Void> update(@PathVariable Long id, @RequestBody Drug drug) {
+    drug.setId(id);
+    drugService.update(drug);
+    return Result.success();
+  }
 }

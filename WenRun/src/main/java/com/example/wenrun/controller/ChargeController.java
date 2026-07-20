@@ -16,32 +16,32 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChargeController {
 
-    private final ChargeService chargeService;
+  private final ChargeService chargeService;
 
-    @GetMapping
-    public Result<List<ChargeOrderVO>> list(@RequestParam(required = false) Integer payStatus,
-                                            @RequestParam(required = false) Long patientId) {
-        return Result.success(chargeService.list(payStatus, patientId));
-    }
+  @GetMapping
+  public Result<List<ChargeOrderVO>> list(@RequestParam(required = false) Integer payStatus,
+      @RequestParam(required = false) Long patientId) {
+    return Result.success(chargeService.list(payStatus, patientId));
+  }
 
-    @GetMapping("/pending")
-    public Result<List<ChargeOrderVO>> pending() {
-        return Result.success(chargeService.list(BizStatus.PAY_PENDING, null));
-    }
+  @GetMapping("/pending")
+  public Result<List<ChargeOrderVO>> pending() {
+    return Result.success(chargeService.list(BizStatus.PAY_PENDING, null));
+  }
 
-    @GetMapping("/{id}")
-    public Result<ChargeOrderVO> get(@PathVariable Long id) {
-        return Result.success(chargeService.getById(id));
-    }
+  @GetMapping("/{id}")
+  public Result<ChargeOrderVO> get(@PathVariable Long id) {
+    return Result.success(chargeService.getById(id));
+  }
 
-    @PostMapping("/from-visit/{visitId}")
-    public Result<Long> createFromVisit(@PathVariable Long visitId) {
-        return Result.success(chargeService.createFromVisit(visitId));
-    }
+  @PostMapping("/from-visit/{visitId}")
+  public Result<Long> createFromVisit(@PathVariable Long visitId) {
+    return Result.success(chargeService.createFromVisit(visitId));
+  }
 
-    @PostMapping("/{id}/pay")
-    public Result<Void> pay(@PathVariable Long id, @Valid @RequestBody ChargePayDTO dto) {
-        chargeService.pay(id, dto);
-        return Result.success();
-    }
+  @PostMapping("/{id}/pay")
+  public Result<Void> pay(@PathVariable Long id, @Valid @RequestBody ChargePayDTO dto) {
+    chargeService.pay(id, dto);
+    return Result.success();
+  }
 }

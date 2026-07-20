@@ -3,20 +3,14 @@ import assert from 'node:assert/strict'
 
 import { normalizeChatEvent, taskFromChatEvent } from '../src/api/modules/ai.js'
 
-test('normalizeChatEvent preserves the complete interrupt payload', () => {
-  const interrupt = {
-    type: 'interrupt',
+test('normalizeChatEvent returns the event unchanged', () => {
+  const event = {
+    type: 'done',
     conversationId: 'conversation-1',
-    interrupts: [{
-      id: 'interrupt-1',
-      title: 'Confirm registration',
-      summary: 'Book a cardiology appointment',
-      args: { departmentId: 12 },
-      allowedDecisions: ['approve', 'reject', 'edit'],
-    }],
+    reply: 'hello',
   }
 
-  assert.deepEqual(normalizeChatEvent(interrupt), interrupt)
+  assert.deepEqual(normalizeChatEvent(event), event)
 })
 
 test('taskFromChatEvent ignores unknown and clinician-only events', () => {

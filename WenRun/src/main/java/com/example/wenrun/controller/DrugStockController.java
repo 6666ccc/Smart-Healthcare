@@ -16,10 +16,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DrugStockController {
 
-    private final DrugStockService drugStockService;
+  private final DrugStockService drugStockService;
 
-    @GetMapping
-    public Result<List<DrugStockVO>> list(@RequestParam(required = false) Boolean lowStockOnly) {
-        return Result.success(drugStockService.list(lowStockOnly));
-    }
+  @GetMapping
+  public Result<List<DrugStockVO>> list(@RequestParam(required = false) Boolean lowStockOnly) {
+    return Result.success(drugStockService.list(lowStockOnly));
+  }
 }

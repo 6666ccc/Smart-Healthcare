@@ -2,11 +2,9 @@ package com.example.wenrun.ai.client;
 
 import com.example.wenrun.ai.config.AiServiceProperties;
 import com.example.wenrun.ai.dto.ChatRequestDTO;
-import com.example.wenrun.ai.dto.ChatResumeRequestDTO;
 import com.example.wenrun.ai.exception.AiServiceException;
 import com.example.wenrun.ai.vo.ChatResponseVO;
 import com.example.wenrun.ai.vo.ChatStreamEventVO;
-import com.example.wenrun.ai.vo.ChatExecutionVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -81,38 +79,6 @@ public class AiServiceClient {
             throw ex;
         } catch (RestClientException ex) {
             throw new AiServiceException("无法连接 AI 服务，请确认 FastAPI 已启动", ex);
-        }
-    }
-
-    /** Continue an approval-paused LangGraph execution. */
-    public ChatExecutionVO resume(ChatResumeRequestDTO request) {
-        if (request == null || !StringUtils.hasText(request.getConversationId()) || request.getDecision() == null) {
-            throw new AiServiceException("恢复会话和审批决定不能为空");
-        }
-        request.setConversationId(request.getConversationId().trim());
-
-        log.debug("恢复 AI 聊天: POST {}{}", properties.getBaseUrl(), properties.getChatResumePath());
-        try {
-            ChatExecutionVO response = aiRestClient.post()
-                    .uri(properties.getChatResumePath())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::isError, (req, res) -> {
-                        String detail = readBody(res.getBody());
-                        throw new AiServiceException(
-                                "AI 恢复服务响应异常: HTTP " + res.getStatusCode().value()
-                                        + (detail.isEmpty() ? "" : " - " + detail));
-                    })
-                    .body(ChatExecutionVO.class);
-            if (response == null || !StringUtils.hasText(response.getStatus())) {
-                throw new AiServiceException("AI 恢复服务返回为空");
-            }
-            return response;
-        } catch (AiServiceException ex) {
-            throw ex;
-        } catch (RestClientException ex) {
-            throw new AiServiceException("无法连接 AI 恢复服务，请确认 FastAPI 已启动", ex);
         }
     }
 

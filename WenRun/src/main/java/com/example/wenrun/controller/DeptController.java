@@ -13,27 +13,27 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DeptController {
 
-    private final DeptService deptService;
+  private final DeptService deptService;
 
-    @GetMapping
-    public Result<List<Dept>> list(@RequestParam(required = false) Integer status) {
-        return Result.success(deptService.list(status));
-    }
+  @GetMapping
+  public Result<List<Dept>> list(@RequestParam(required = false) Integer status) {
+    return Result.success(deptService.list(status));
+  }
 
-    @GetMapping("/{id}")
-    public Result<Dept> get(@PathVariable Long id) {
-        return Result.success(deptService.getById(id));
-    }
+  @GetMapping("/{id}")
+  public Result<Dept> get(@PathVariable Long id) {
+    return Result.success(deptService.getById(id));
+  }
 
-    @PostMapping
-    public Result<Long> create(@RequestBody Dept dept) {
-        return Result.success(deptService.create(dept));
-    }
+  @PostMapping
+  public Result<Long> create(@RequestBody Dept dept) {
+    return Result.success(deptService.create(dept));
+  }
 
-    @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody Dept dept) {
-        dept.setId(id);
-        deptService.update(dept);
-        return Result.success();
-    }
+  @PutMapping("/{id}")
+  public Result<Void> update(@PathVariable Long id, @RequestBody Dept dept) {
+    dept.setId(id);
+    deptService.update(dept);
+    return Result.success();
+  }
 }

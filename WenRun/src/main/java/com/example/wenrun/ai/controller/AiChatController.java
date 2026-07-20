@@ -2,11 +2,9 @@ package com.example.wenrun.ai.controller;
 
 import com.example.wenrun.ai.config.AiServiceProperties;
 import com.example.wenrun.ai.dto.ChatRequestDTO;
-import com.example.wenrun.ai.dto.ChatResumeRequestDTO;
 import com.example.wenrun.ai.exception.AiServiceException;
 import com.example.wenrun.ai.service.AiChatService;
 import com.example.wenrun.ai.vo.ChatResponseVO;
-import com.example.wenrun.ai.vo.ChatExecutionVO;
 import com.example.wenrun.common.Result;
 import com.example.wenrun.common.constant.AccountType;
 import com.example.wenrun.config.AuthTokenStore;
@@ -65,25 +63,6 @@ public class AiChatController {
         saveMessage(dto.getConversationId(), dto.getUserId(), "assistant",
                 response != null ? response.getReply() : "");
 
-        return Result.success(response);
-    }
-
-    /** Continue a LangGraph execution after the authenticated user has made a HITL decision. */
-    @PostMapping("/chat/resume")
-    public Result<ChatExecutionVO> resumeChat(@Valid @RequestBody ChatResumeRequestDTO dto,
-                                               HttpServletRequest request) {
-        enrichResumeContext(dto, resolveToken(request));
-        dto.setApiKey(aiServiceProperties.getApiKey());
-
-        ChatExecutionVO response = aiChatService.resume(dto);
-        if (response != null
-                && "completed".equalsIgnoreCase(response.getStatus())
-                && StringUtils.hasText(response.getReply())) {
-            String conversationId = StringUtils.hasText(response.getConversationId())
-                    ? response.getConversationId()
-                    : dto.getConversationId();
-            saveMessage(conversationId, dto.getUserId(), "assistant", response.getReply());
-        }
         return Result.success(response);
     }
 
@@ -224,40 +203,6 @@ public class AiChatController {
                 dto.setPatientAllergyHistory(patient.getAllergyHistory());
             }
         }
-    }
-
-    /**
-     * Rebuilds identity from the authenticated token, deliberately discarding every identity
-     * value supplied by the resume caller.
-     */
-    private void enrichResumeContext(ChatResumeRequestDTO dto, String token) {
-        dto.setUserId(null);
-        dto.setUsername(null);
-        dto.setRealName(null);
-        dto.setRoleCode(null);
-        dto.setPortalType(null);
-        dto.setStaffId(null);
-        dto.setPatientId(null);
-        dto.setPatientNo(null);
-        dto.setPatientName(null);
-        dto.setPatientGender(null);
-        dto.setPatientBirthDate(null);
-        dto.setPatientAllergyHistory(null);
-
-        ChatRequestDTO trusted = new ChatRequestDTO();
-        enrichContext(trusted, token);
-        dto.setUserId(trusted.getUserId());
-        dto.setUsername(trusted.getUsername());
-        dto.setRealName(trusted.getRealName());
-        dto.setRoleCode(trusted.getRoleCode());
-        dto.setPortalType(trusted.getPortalType());
-        dto.setStaffId(trusted.getStaffId());
-        dto.setPatientId(trusted.getPatientId());
-        dto.setPatientNo(trusted.getPatientNo());
-        dto.setPatientName(trusted.getPatientName());
-        dto.setPatientGender(trusted.getPatientGender());
-        dto.setPatientBirthDate(trusted.getPatientBirthDate());
-        dto.setPatientAllergyHistory(trusted.getPatientAllergyHistory());
     }
 
     private String resolveToken(HttpServletRequest request) {
